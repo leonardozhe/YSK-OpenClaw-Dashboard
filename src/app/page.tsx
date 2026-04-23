@@ -28,6 +28,7 @@ import { CopyButton } from '@/components/copy-button'
 import { SmartTerminal } from '@/components/smart-terminal'
 import { WebsocketTerminal, Channel } from '@/components/websocket-terminal'
 import { contacts, Contact, Message, getAIResponse, cn } from '@/lib/utils'
+import { usePersistentConfig } from '@/hooks/use-persistent-config'
 
 // Channel 数据类型
 interface ChannelData {
@@ -115,56 +116,49 @@ export default function Home() {
   const [selectedProfileAgentName, setSelectedProfileAgentName] = useState('')
   const [selectedProfileAgentAvatar, setSelectedProfileAgentAvatar] = useState('')
   
+  // 使用配置持久化 Hook
+  const { config, isLoading: configLoading, saveConfig, importConfig, downloadConfig: exportConfigFn, resetConfig } = usePersistentConfig()
+  
   // 设置相关状态
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [customTitle, setCustomTitle] = useState('YSK小龙虾工作监控系统')
-  const [customLogo, setCustomLogo] = useState(() => {
-    if (typeof window === 'undefined') return '/openclaw.png'
-    return localStorage.getItem('openclaw-custom-logo') || '/openclaw.png'
-  })
-  const [lobsterCount, setLobsterCount] = useState(() => {
-    if (typeof window === 'undefined') return 5
-    const saved = localStorage.getItem('openclaw-lobster-count')
-    if (saved) {
-      const count = parseInt(saved)
-      if (!isNaN(count) && count >= 1 && count <= 20) {
-        return count
+  const [customLogo, setCustomLogo] = useState('/openclaw.png')
+  const [lobsterCount, setLobsterCount] = useState(5)
+  const [teamName, setTeamName] = useState('海洋战队')
+  const [unit, setUnit] = useState('只虾')
+  const [avatarStyle, setAvatarStyle] = useState('bottts')
+  const [effects, setEffects] = useState<string[]>(['scanline'])
+  const [mainProcessName, setMainProcessName] = useState('龙虾船长')
+  
+  // 初始化加载配置
+  useEffect(() => {
+    if (!configLoading && config) {
+      setCustomTitle(config.customTitle)
+      setCustomLogo(config.customLogo)
+      setLobsterCount(config.lobsterCount)
+      setTeamName(config.teamName)
+      setUnit(config.unit)
+      setAvatarStyle(config.avatarStyle)
+      setEffects(config.effects)
+      setMainProcessName(config.mainProcessName)
+      setSelectedAgentId(config.selectedAgentId)
+      setCurrentAssistant(contacts.find(c => c.id === config.chatAssistant) || contacts[0])
+      if (Object.keys(config.agentChatMessages).length > 0) {
+        setAgentChatMessages(config.agentChatMessages)
+      }
+      if (config.presetCommands.length > 0) {
+        setPresetCommands(config.presetCommands)
+      }
+      if (config.permissionAgreed) {
+        setShowPermissionModal(false)
       }
     }
-    return 5
-  })
-  const [teamName, setTeamName] = useState(() => {
-    if (typeof window === 'undefined') return '海洋战队'
-    return localStorage.getItem('openclaw-team-name') || '海洋战队'
-  })
-  const [unit, setUnit] = useState(() => {
-    if (typeof window === 'undefined') return '只虾'
-    return localStorage.getItem('openclaw-unit') || '只虾'
-  })
-  const [avatarStyle, setAvatarStyle] = useState(() => {
-    if (typeof window === 'undefined') return 'bottts'
-    return localStorage.getItem('openclaw-avatar-style') || 'bottts'
-  })
-  const [effects, setEffects] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return ['scanline']
-    const savedEffects = localStorage.getItem('openclaw-effects')
-    if (savedEffects) {
-      try {
-        const parsedEffects = JSON.parse(savedEffects)
-        if (Array.isArray(parsedEffects)) {
-          return parsedEffects
-        }
-      } catch (e) {
-        console.error('Failed to parse saved effects:', e)
-      }
-    }
-    return ['scanline']
-  })
-  const [mainProcessName, setMainProcessName] = useState(() => {
-    if (typeof window === 'undefined') return '龙虾船长'
-    return localStorage.getItem('openclaw-main-process-name') || '龙虾船长'
-  })
+  }, [configLoading, config])
   const [githubStars, setGithubStars] = useState<number | null>(null)
+  
+  // 版本检查状态
+  const [updateInfo, setUpdateInfo] = useState<{ hasUpdate: boolean; latestVersion: string; releaseUrl: string } | null>(null)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
   
   // 权限审批状态
   const [showPermissionModal, setShowPermissionModal] = useState(() => {
@@ -172,14 +166,6 @@ export default function Home() {
     return localStorage.getItem('ysk-permission-agreed') !== 'true'
   })
   
-  // 保存聊天记录到 localStorage
-  useEffect(() => {
-    // 保存按 agent 存储的聊天记录
-    localStorage.setItem('openclaw-agent-chat-messages', JSON.stringify(agentChatMessages))
-    // 保存当前选中的 agent ID
-    localStorage.setItem('openclaw-selected-agent-id', selectedAgentId)
-    localStorage.setItem('openclaw-chat-assistant', currentAssistant.id)
-  }, [agentChatMessages, selectedAgentId, currentAssistant.id])
   
   // 睡眠计时器
   useEffect(() => {
@@ -259,6 +245,40 @@ export default function Home() {
       }
     }
     fetchGithubStars()
+  }, [])
+  
+  // 24 小时检查一次 GitHub 新版本
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const response = await fetch('/api/version-check')
+        if (!response.ok) return
+        
+        const data = await response.json()
+        if (data.hasUpdate) {
+          setUpdateInfo({
+            hasUpdate: true,
+            latestVersion: data.latestVersion,
+            releaseUrl: data.release?.html_url || 'https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases'
+          })
+          
+          // 检查是否已经提示过这个版本
+          const lastPromptedVersion = localStorage.getItem('meetclaw-last-prompted-version')
+          if (lastPromptedVersion !== data.latestVersion) {
+            setShowUpdateModal(true)
+            localStorage.setItem('meetclaw-last-prompted-version', data.latestVersion)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check for updates:', error)
+      }
+    }
+    
+    checkForUpdates()
+    
+    // 24 小时检查一次
+    const interval = setInterval(checkForUpdates, 24 * 60 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
   
   // 选择联系人 - 打开 Agent 个人信息弹窗
@@ -465,10 +485,15 @@ export default function Home() {
   const [newCommandLabel, setNewCommandLabel] = useState('')
   const [newCommandText, setNewCommandText] = useState('')
   
-  // 保存命令到 localStorage
+  // 保存命令和聊天记录到统一配置
   useEffect(() => {
-    localStorage.setItem('openclaw-preset-commands', JSON.stringify(presetCommands))
-  }, [presetCommands])
+    saveConfig({
+      presetCommands,
+      agentChatMessages,
+      selectedAgentId,
+      chatAssistant: currentAssistant.id
+    })
+  }, [presetCommands, agentChatMessages, selectedAgentId, currentAssistant.id, saveConfig])
   
   // 删除命令
   const handleDeleteCommand = useCallback((index: number) => {
@@ -693,15 +718,17 @@ export default function Home() {
     setAvatarStyle(style)
     setEffects(newEffects)
     setMainProcessName(newMainProcessName)
-    localStorage.setItem('openclaw-custom-title', title)
-    localStorage.setItem('openclaw-custom-logo', logo)
-    localStorage.setItem('openclaw-lobster-count', count.toString())
-    localStorage.setItem('openclaw-team-name', team)
-    localStorage.setItem('openclaw-unit', unitName)
-    localStorage.setItem('openclaw-avatar-style', style)
-    localStorage.setItem('openclaw-effects', JSON.stringify(newEffects))
-    localStorage.setItem('openclaw-main-process-name', newMainProcessName)
-  }, [])
+    saveConfig({
+      customTitle: title,
+      customLogo: logo,
+      lobsterCount: count,
+      teamName: team,
+      unit: unitName,
+      avatarStyle: style,
+      effects: newEffects,
+      mainProcessName: newMainProcessName
+    })
+  }, [saveConfig])
   
 // 格式化 star 数量
 const formatStars = (stars: number): string => {
@@ -725,11 +752,10 @@ const formatTimestamp = (timestamp: number): string => {
   }, [])
 
   const handlePermissionDecline = useCallback(() => {
-    // 用户拒绝后显示简单提示，不阻止使用
     alert('您已拒绝许可协议。继续使用即表示您同意本软件的使用条款。')
     setShowPermissionModal(false)
-    localStorage.setItem('ysk-permission-agreed', 'true')
-  }, [])
+    saveConfig({ permissionAgreed: true })
+  }, [saveConfig])
 
   // 防止 hydration 错误：只在客户端挂载后渲染完整内容
   if (!mounted) {
@@ -1380,7 +1406,25 @@ const formatTimestamp = (timestamp: number): string => {
         </div>
         
         {/* 底部中间版权信息 */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+          {/* 新版本提示按钮 */}
+          {updateInfo?.hasUpdate && (
+            <motion.button
+              onClick={() => setShowUpdateModal(true)}
+              className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all"
+              style={{
+                background: 'rgba(16, 185, 129, 0.2)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                color: '#10b981'
+              }}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              whileHover={{ scale: 1.1 }}
+            >
+              发现新版本 V{updateInfo.latestVersion}
+            </motion.button>
+          )}
+          
           <div className="text-xs text-gray-500">
             Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3
           </div>
@@ -1414,6 +1458,28 @@ const formatTimestamp = (timestamp: number): string => {
         currentEffects={effects}
         currentMainProcessName={mainProcessName}
         onSave={handleSaveSettings}
+        onExport={() => {
+          const currentConfig = {
+            customTitle,
+            customLogo,
+            lobsterCount,
+            teamName,
+            unit,
+            avatarStyle,
+            effects,
+            mainProcessName,
+            selectedAgentId,
+            chatAssistant: currentAssistant.id,
+            presetCommands,
+            agentChatMessages,
+            permissionAgreed: !showPermissionModal,
+            version: '2.3',
+            lastSavedAt: new Date().toISOString()
+          } as any
+          exportConfigFn()
+        }}
+        onImport={(content: string) => importConfig(content)}
+        onReset={resetConfig}
       />
       
       {/* Agent 个人信息弹窗 */}
@@ -1564,6 +1630,75 @@ const formatTimestamp = (timestamp: number): string => {
           onDecline={handlePermissionDecline}
         />
       )}
+      
+      {/* 新版本提示弹窗 */}
+      <AnimatePresence>
+        {showUpdateModal && updateInfo?.hasUpdate && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowUpdateModal(false)} />
+            <motion.div
+              className="relative w-full max-w-md rounded-2xl overflow-hidden"
+              style={{
+                background: 'rgba(15, 15, 25, 0.98)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                boxShadow: '0 0 60px rgba(16, 185, 129, 0.2)'
+              }}
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* 头部 */}
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(16, 185, 129, 0.2)' }}>
+                    <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-18.356-2M4.582 9A8.003 8.003 0 0119.418 15M9 19V9m6 10V9" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-medium text-white">发现新版本 V{updateInfo.latestVersion}</h3>
+                </div>
+                <button
+                  onClick={() => setShowUpdateModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* 内容 */}
+              <div className="px-5 py-4">
+                <p className="text-sm text-gray-400 mb-3">
+                  MeetClaw 已发布新版本，建议升级到最新版以获取最新功能和修复。
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="flex-1 px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    稍后提醒
+                  </button>
+                  <a
+                    href={updateInfo.releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-center bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                  >
+                    查看更新
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

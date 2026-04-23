@@ -10,6 +10,51 @@
 
 ---
 
+## 🤖 Agent 安装方式（复制给 AI Agent）
+
+> **使用方法**：将以下框内内容完整复制，发送给 OpenClaw、Hermes 或其他 AI 编程 Agent，Agent 将自动完成安装部署。
+
+---
+
+````
+请帮我安装并部署 MeetClaw 监控系统。项目地址：https://github.com/leonardozhe/YSK-OpenClaw-Dashboard
+
+请按以下步骤执行：
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/leonardozhe/YSK-OpenClaw-Dashboard.git
+   cd YSK-OpenClaw-Dashboard
+   ```
+
+2. **检查环境**
+   - 确认 Node.js 版本 >= 20：`node -v`
+   - 如果 Node.js 未安装，请先安装
+
+3. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+4. **构建并启动**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+5. **验证安装**
+   - 确认服务运行在 http://localhost:4000
+   - 检查终端输出无错误
+
+6. **可选：配置 OpenClaw 连接**
+   - 确保 `~/.openclaw/openclaw.json` 存在且配置正确
+   - 系统将自动读取 OpenClaw 的配置信息
+
+完成后告诉我访问地址和运行状态。
+````
+
+---
+
 ## 🚀 Quick Start
 
 ### Production Run (Recommended)
@@ -146,6 +191,51 @@ MIT License
 - 版本号移至底部中间：Powered by ClawBang.cn © 2026 All Rights Reserved V2.3
 - 新版本提示按钮（带动画效果）
 - 配置管理区域：导出配置、导入配置、重置设置
+
+---
+
+## 🤖 Agent 安装方式（复制给 AI Agent）
+
+> **使用方法**：将以下框内内容完整复制，发送给 OpenClaw、Hermes 或其他 AI 编程 Agent，Agent 将自动完成安装部署。
+
+---
+
+````
+请帮我安装并部署 MeetClaw 监控系统。项目地址：https://github.com/leonardozhe/YSK-OpenClaw-Dashboard
+
+请按以下步骤执行：
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/leonardozhe/YSK-OpenClaw-Dashboard.git
+   cd YSK-OpenClaw-Dashboard
+   ```
+
+2. **检查环境**
+   - 确认 Node.js 版本 >= 20：`node -v`
+   - 如果 Node.js 未安装，请先安装
+
+3. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+4. **构建并启动**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+5. **验证安装**
+   - 确认服务运行在 http://localhost:4000
+   - 检查终端输出无错误
+
+6. **可选：配置 OpenClaw 连接**
+   - 确保 `~/.openclaw/openclaw.json` 存在且配置正确
+   - 系统将自动读取 OpenClaw 的配置信息
+
+完成后告诉我访问地址和运行状态。
+````
 
 ---
 

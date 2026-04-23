@@ -135,12 +135,28 @@ export function parseConfig(content: string): AppConfig | null {
   }
 }
 
-// 导出配置文件
+// 导出系统设置（不包含对话记录）
 export function exportConfig(config: AppConfig): string {
-  return JSON.stringify(config, null, 2)
+  const settingsOnly = {
+    customTitle: config.customTitle,
+    customLogo: config.customLogo,
+    lobsterCount: config.lobsterCount,
+    teamName: config.teamName,
+    unit: config.unit,
+    avatarStyle: config.avatarStyle,
+    effects: config.effects,
+    mainProcessName: config.mainProcessName,
+    selectedAgentId: config.selectedAgentId,
+    chatAssistant: config.chatAssistant,
+    presetCommands: config.presetCommands,
+    permissionAgreed: config.permissionAgreed,
+    version: config.version,
+    lastSavedAt: config.lastSavedAt
+  }
+  return JSON.stringify(settingsOnly, null, 2)
 }
 
-// 下载配置文件
+// 下载配置文件（仅系统设置）
 export function downloadConfig(config: AppConfig) {
   const content = exportConfig(config)
   const blob = new Blob([content], { type: 'application/json' })

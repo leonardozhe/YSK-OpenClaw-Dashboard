@@ -1257,6 +1257,36 @@ const formatTimestamp = (timestamp: number): string => {
             </div>
           </div>
           
+          {/* 底部版权信息栏 - 放在中间区域底部 */}
+          <div className="py-2 px-4 border-t flex-shrink-0" style={{
+            background: 'rgba(8, 8, 12, 0.6)',
+            borderColor: 'rgba(255, 255, 255, 0.06)'
+          }}>
+            <div className="flex items-center justify-center gap-3">
+              {/* 新版本提示按钮 */}
+              {updateInfo?.hasUpdate && (
+                <motion.button
+                  onClick={() => setShowUpdateModal(true)}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    color: '#10b981'
+                  }}
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  发现新版本 V{updateInfo.latestVersion}
+                </motion.button>
+              )}
+              
+              <div className="text-xs text-gray-500">
+                Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3
+              </div>
+            </div>
+          </div>
+          
           {/* 悬浮聊天框 - 点击头像时显示 */}
           <AnimatePresence>
             {isChatOpen && (
@@ -1403,36 +1433,6 @@ const formatTimestamp = (timestamp: number): string => {
             )}
           </AnimatePresence>
           
-        </div>
-        
-        {/* 底部版权信息栏 */}
-        <div className="py-2 px-4 border-t" style={{
-          background: 'rgba(8, 8, 12, 0.6)',
-          borderColor: 'rgba(255, 255, 255, 0.06)'
-        }}>
-          <div className="flex items-center justify-center gap-3">
-            {/* 新版本提示按钮 */}
-            {updateInfo?.hasUpdate && (
-              <motion.button
-                onClick={() => setShowUpdateModal(true)}
-                className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all"
-                style={{
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  color: '#10b981'
-                }}
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                whileHover={{ scale: 1.1 }}
-              >
-                发现新版本 V{updateInfo.latestVersion}
-              </motion.button>
-            )}
-            
-            <div className="text-xs text-gray-500">
-              Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3
-            </div>
-          </div>
         </div>
         
         {/* 右侧联系人面板 */}

@@ -110,7 +110,15 @@ export function SystemStatusCards() {
   const [agentCount, setAgentCount] = useState(0) // 活跃 agent 数量
   const [systemLoad, setSystemLoad] = useState<number | null>(null) // 系统负载百分比
   const [ollamaRunningCount, setOllamaRunningCount] = useState<number | null>(null) // Ollama 运行中的模型数量
-  const [vectorMemoryEnabled, setVectorMemoryEnabled] = useState<boolean | null>(null) // 向量记忆是否启用
+  const [vectorMemoryStatus, setVectorMemoryStatus] = useState<{
+    enabled: boolean
+    pluginInstalled: boolean
+    pluginEnabled: boolean
+    embeddingModel: string | null
+    ollamaRunning: boolean
+    ollamaEmbeddingModels: string[]
+    issues: string[]
+  } | null>(null) // 向量记忆详细状态
   const [tokenConsumption, setTokenConsumption] = useState<number | null>(null) // Token 消耗总量
   const [updatingCards, setUpdatingCards] = useState<Set<number>>(new Set())
   
@@ -222,7 +230,7 @@ export function SystemStatusCards() {
     return () => clearInterval(interval)
   }, [])
   
-  // 获取向量记忆状态
+  // 获取向量记忆详细状态
   useEffect(() => {
     const fetchVectorMemoryStatus = async () => {
       try {
@@ -231,10 +239,18 @@ export function SystemStatusCards() {
           return // 静默失败，不显示错误
         }
         const data = await response.json()
-        setVectorMemoryEnabled(data.enabled)
+        setVectorMemoryStatus({
+          enabled: data.enabled,
+          pluginInstalled: data.pluginInstalled,
+          pluginEnabled: data.pluginEnabled,
+          embeddingModel: data.embeddingModel,
+          ollamaRunning: data.ollamaRunning,
+          ollamaEmbeddingModels: data.ollamaEmbeddingModels || [],
+          issues: data.issues || []
+        })
       } catch (error) {
         console.error('Failed to fetch vector memory status:', error)
-        setVectorMemoryEnabled(false)
+        setVectorMemoryStatus(null)
       }
     }
     
@@ -341,8 +357,11 @@ export function SystemStatusCards() {
     {
       icon: <Network className="w-4 h-4" />,
       label: '向量记忆',
-      value: vectorMemoryEnabled === null ? '检测中...' : vectorMemoryEnabled ? '已激活' : '未启用',
-      status: vectorMemoryEnabled === true ? 'success' : 'warning',
+      value: vectorMemoryStatus === null ? '检测中...' :
+             vectorMemoryStatus.enabled ? '已激活' :
+             vectorMemoryStatus.pluginInstalled ? '插件已安装' : '未安装',
+      status: vectorMemoryStatus?.enabled ? 'success' :
+              vectorMemoryStatus?.pluginInstalled ? 'info' : 'warning',
       index: 3,
       isUpdating: updatingCards.has(3),
     },

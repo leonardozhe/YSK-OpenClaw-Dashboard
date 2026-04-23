@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState, useEffect, useCallback } from 'react'
-import { Server, Brain, Cpu, HardDrive, ArrowDown, ArrowUp, Monitor, RefreshCw } from 'lucide-react'
+import { Server, Brain, Cpu, HardDrive, ArrowDown, ArrowUp, Monitor, RefreshCw, Network } from 'lucide-react'
 import { VoiceVisualizer } from './voice-visualizer'
 import { OpenClawStatusCard } from './openclaw-status-card'
 
@@ -548,11 +548,23 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
   )
 }
 
+// 向量记忆状态接口
+interface VectorMemoryStatus {
+  enabled: boolean
+  pluginInstalled: boolean
+  pluginEnabled: boolean
+  embeddingModel: string | null
+  ollamaRunning: boolean
+  ollamaEmbeddingModels: string[]
+  issues: string[]
+}
+
 export function DeviceMonitor() {
   const [systemData, setSystemData] = useState<RealSystemData | null>(null)
   const [providers, setProviders] = useState<ProviderData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeProviderIndex, setActiveProviderIndex] = useState(0)
+  const [vectorMemory, setVectorMemory] = useState<VectorMemoryStatus | null>(null)
 
   // 获取系统信息
   const fetchSystemInfo = useCallback(async () => {
@@ -567,6 +579,25 @@ export function DeviceMonitor() {
       console.error('Failed to fetch system info:', error)
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  // 获取向量记忆状态
+  const fetchVectorMemory = useCallback(async () => {
+    try {
+      const response = await fetch('/api/vector-memory-status')
+      const data = await response.json()
+      setVectorMemory({
+        enabled: data.enabled,
+        pluginInstalled: data.pluginInstalled,
+        pluginEnabled: data.pluginEnabled,
+        embeddingModel: data.embeddingModel,
+        ollamaRunning: data.ollamaRunning,
+        ollamaEmbeddingModels: data.ollamaEmbeddingModels || [],
+        issues: data.issues || []
+      })
+    } catch (error) {
+      console.error('Failed to fetch vector memory status:', error)
     }
   }, [])
 
@@ -655,11 +686,13 @@ export function DeviceMonitor() {
     // 初始化所有数据
     fetchSystemInfo()
     fetchProviders()
+    fetchVectorMemory()
 
     // 每 15 分钟刷新一次完整信息（包含 token、版本、安全审计等）
     const fullRefreshInterval = setInterval(() => {
       fetchSystemInfo()
       fetchProviders()
+      fetchVectorMemory()
     }, 900000) // 15 分钟 = 15 * 60 * 1000 毫秒
 
     // 每 30 秒刷新一次延迟信息（从15秒改为30秒，减少网络负载）
@@ -669,7 +702,7 @@ export function DeviceMonitor() {
       clearInterval(fullRefreshInterval)
       clearInterval(latencyRefreshInterval)
     }
-  }, [fetchSystemInfo, fetchProviders, refreshLatencies])
+  }, [fetchSystemInfo, fetchProviders, fetchVectorMemory, refreshLatencies])
 
   // 统计使用中的模型数量
   const inUseCount = providers.filter(p => p.models.some(m => m.inUse)).length
@@ -727,6 +760,110 @@ export function DeviceMonitor() {
             <ProviderCard key={providers[activeProviderIndex]?.id} provider={providers[activeProviderIndex]} index={0} />
           )}
         </div>
+      </div>
+
+      {/* 向量记忆状态 */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-white/80 flex items-center gap-2">
+            <Network className="w-4 h-4" style={{ color: '#00FF66' }} />
+            向量记忆
+          </h3>
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{
+            background: vectorMemory?.enabled ? '#00FF66' : vectorMemory?.pluginInstalled ? '#FFAA00' : '#FF4444',
+            boxShadow: `0 0 6px ${vectorMemory?.enabled ? '#00FF66' : vectorMemory?.pluginInstalled ? '#FFAA00' : '#FF4444'}`
+          }} />
+        </div>
+        <motion.div
+          className="relative p-3 rounded-xl overflow-hidden"
+          style={{
+            background: 'rgba(15, 15, 25, 0.9)',
+            border: `1px solid ${vectorMemory?.enabled ? 'rgba(0, 255, 102, 0.3)' : 'rgba(255,255,255,0.08)'}`
+          }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {vectorMemory === null ? (
+            <div className="text-center py-2">
+              <span className="text-xs text-white/40">检测中...</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* 插件状态 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">LanceDB 插件</span>
+                <span className="text-[10px]" style={{
+                  color: vectorMemory.pluginInstalled ? '#00FF66' : '#FF4444'
+                }}>
+                  {vectorMemory.pluginInstalled ? '已安装' : '未安装'}
+                </span>
+              </div>
+              
+              {/* 插件启用状态 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">插件启用</span>
+                <span className="text-[10px]" style={{
+                  color: vectorMemory.pluginEnabled ? '#00FF66' : '#FFAA00'
+                }}>
+                  {vectorMemory.pluginEnabled ? '已启用' : '未启用'}
+                </span>
+              </div>
+              
+              {/* Embedding 模型 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">Embedding 模型</span>
+                <span className="text-[10px] text-cyan-400">
+                  {vectorMemory.embeddingModel || '未配置'}
+                </span>
+              </div>
+              
+              {/* Ollama 状态 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">Ollama 运行</span>
+                <span className="text-[10px]" style={{
+                  color: vectorMemory.ollamaRunning ? '#00FF66' : '#FF4444'
+                }}>
+                  {vectorMemory.ollamaRunning ? '运行中' : '未运行'}
+                </span>
+              </div>
+              
+              {/* 可用的 Embedding 模型 */}
+              {vectorMemory.ollamaEmbeddingModels.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-white/50 block mb-1">可用 Embedding 模型</span>
+                  <div className="flex flex-wrap gap-1">
+                    {vectorMemory.ollamaEmbeddingModels
+                      .filter(m => m.toLowerCase().includes('embed') || m.toLowerCase().includes('nomic') || m.toLowerCase().includes('bge'))
+                      .map(m => (
+                        <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full" style={{
+                          background: 'rgba(0, 240, 255, 0.15)',
+                          color: '#00F0FF'
+                        }}>
+                          {m}
+                        </span>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+              
+              {/* 问题列表 */}
+              {vectorMemory.issues.length > 0 && (
+                <div className="pt-2 border-t border-white/10">
+                  <span className="text-[10px] text-white/50 block mb-1">待解决问题</span>
+                  <div className="space-y-1">
+                    {vectorMemory.issues.slice(0, 3).map((issue, i) => (
+                      <div key={i} className="text-[9px] text-orange-400/80">• {issue}</div>
+                    ))}
+                    {vectorMemory.issues.length > 3 && (
+                      <div className="text-[9px] text-white/40">+{vectorMemory.issues.length - 3} 更多</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
       </div>
 
       {/* OpenClaw 状态 */}

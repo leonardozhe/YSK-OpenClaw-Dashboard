@@ -27,11 +27,9 @@ interface VectorMemoryStatus {
 // 检查 lancedb 插件是否已安装
 async function checkPluginInstalled(): Promise<{ installed: boolean; pluginName: string | null }> {
   try {
-    // 检查 OpenClaw 插件目录
+    // 检查 OpenClaw 插件目录 - 多种可能的路径
     const openclawDir = join(homedir(), '.openclaw')
-    const nodeModulesPath = join(openclawDir, 'node_modules')
     
-    // 检查是否存在 memory-lancedb-pro 或 memory-lancedb（包括 scoped 包名）
     // 优先级：lancedb-pro > lancedb
     const possibleNames = [
       'memory-lancedb-pro',
@@ -44,17 +42,53 @@ async function checkPluginInstalled(): Promise<{ installed: boolean; pluginName:
       'lancedb'
     ]
     
+    // 1. 检查 ~/.openclaw/node_modules (如果存在)
+    const nodeModulesPath = join(openclawDir, 'node_modules')
     for (const name of possibleNames) {
       if (existsSync(join(nodeModulesPath, name))) {
         return { installed: true, pluginName: name }
       }
     }
     
-    // 尝试通过 npm list 检查
+    // 2. 检查全局 npm 安装路径 (常见路径)
+    const npmGlobalPaths = [
+      join(homedir(), '.npm-global', 'lib', 'node_modules', 'openclaw', 'node_modules'),
+      join(homedir(), '.nvm', 'versions', 'node', 'lib', 'node_modules', 'openclaw', 'node_modules'),
+      '/usr/local/lib/node_modules/openclaw/node_modules',
+      '/opt/homebrew/lib/node_modules/openclaw/node_modules',
+    ]
+    
+    for (const basePath of npmGlobalPaths) {
+      if (existsSync(basePath)) {
+        for (const name of possibleNames) {
+          if (existsSync(join(basePath, name))) {
+            return { installed: true, pluginName: name }
+          }
+        }
+        // 也检查 @lancedb 目录
+        if (existsSync(join(basePath, '@lancedb'))) {
+          return { installed: true, pluginName: '@lancedb/lancedb' }
+        }
+      }
+    }
+    
+    // 3. 尝试通过 npm list 检查
     try {
       const { stdout } = await execAsync('npm list --prefix ~/.openclaw 2>/dev/null | grep -E "memory-lancedb|lancedb"', { shell: '/bin/bash' })
       if (stdout.trim()) {
-        // 提取插件名称
+        const match = stdout.match(/(memory-lancedb[-pro]?|@openclaw\/memory-lancedb[-pro]?|@openclaw\/lancedb[-pro]?|lancedb[-pro]?)/)
+        if (match) {
+          return { installed: true, pluginName: match[1] }
+        }
+      }
+    } catch {
+      // npm list 失败，继续
+    }
+    
+    // 4. 尝试通过 npm list 检查全局路径
+    try {
+      const { stdout } = await execAsync('npm list -g --depth=0 2>/dev/null | grep -E "memory-lancedb|lancedb|openclaw"', { shell: '/bin/bash' })
+      if (stdout.trim()) {
         const match = stdout.match(/(memory-lancedb[-pro]?|@openclaw\/memory-lancedb[-pro]?|@openclaw\/lancedb[-pro]?|lancedb[-pro]?)/)
         if (match) {
           return { installed: true, pluginName: match[1] }

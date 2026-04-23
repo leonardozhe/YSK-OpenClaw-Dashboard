@@ -21,6 +21,8 @@ interface VectorMemoryStatus {
   ollamaEmbeddingModels: string[]
   autoCapture: boolean
   autoRecall: boolean
+  recallAvailable: boolean
+  recallLatency: number | null
   issues: string[]
 }
 
@@ -58,6 +60,63 @@ function checkEmbeddingModelAvailable(
   }
   
   return false
+}
+
+// 测试向量记忆 recall 功能
+async function testRecall(
+  enabled: boolean,
+  embeddingBaseUrl: string | null,
+  embeddingModel: string | null,
+  embeddingProvider: string | null
+): Promise<{ available: boolean; latency: number | null }> {
+  if (!enabled || !embeddingBaseUrl || !embeddingModel) {
+    return { available: false, latency: null }
+  }
+  
+  try {
+    const startTime = Date.now()
+    
+    // 如果是 Ollama provider，使用 OpenAI 兼容 API 测试 embedding
+    if (embeddingProvider === 'openai-compatible' && embeddingBaseUrl.includes('localhost:11434')) {
+      const response = await fetch(`${embeddingBaseUrl}/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: embeddingModel,
+          input: 'test recall'
+        }),
+        signal: AbortSignal.timeout(5000)
+      })
+      
+      const latency = Date.now() - startTime
+      
+      if (response.ok) {
+        return { available: true, latency }
+      }
+    }
+    // 其他 provider，尝试发送一个简单的 embedding 请求
+    else {
+      const response = await fetch(`${embeddingBaseUrl}/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: embeddingModel,
+          input: 'test recall'
+        }),
+        signal: AbortSignal.timeout(5000)
+      })
+      
+      const latency = Date.now() - startTime
+      
+      if (response.ok) {
+        return { available: true, latency }
+      }
+    }
+    
+    return { available: false, latency: null }
+  } catch {
+    return { available: false, latency: null }
+  }
 }
 
 export async function GET() {
@@ -184,6 +243,18 @@ export async function GET() {
     const pluginInstalled = pluginInConfig // 配置了就认为已安装
     const enabled = pluginInConfig && pluginEnabled && memorySlot
     
+    // 测试 recall 功能
+    const { available: recallAvailable, latency: recallLatency } = await testRecall(
+      enabled,
+      embeddingBaseUrl,
+      embeddingModel,
+      embeddingProvider
+    )
+    
+    if (enabled && !recallAvailable) {
+      issues.push('向量记忆 recall 功能不可用')
+    }
+    
     return NextResponse.json({
       enabled,
       pluginInstalled,
@@ -198,6 +269,8 @@ export async function GET() {
       ollamaEmbeddingModels: ollamaModels,
       autoCapture,
       autoRecall,
+      recallAvailable,
+      recallLatency,
       issues
     })
   } catch (error) {
@@ -216,6 +289,8 @@ export async function GET() {
       ollamaEmbeddingModels: [],
       autoCapture: false,
       autoRecall: false,
+      recallAvailable: false,
+      recallLatency: null,
       issues: ['检测向量记忆状态时出错']
     }, { status: 500 })
   }

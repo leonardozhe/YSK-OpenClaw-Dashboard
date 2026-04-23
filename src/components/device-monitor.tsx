@@ -556,6 +556,9 @@ interface VectorMemoryStatus {
   embeddingModel: string | null
   ollamaRunning: boolean
   ollamaEmbeddingModels: string[]
+  recallAvailable: boolean
+  recallLatency: number | null
+  autoRecall: boolean
   issues: string[]
 }
 
@@ -594,6 +597,9 @@ export function DeviceMonitor() {
         embeddingModel: data.embeddingModel,
         ollamaRunning: data.ollamaRunning,
         ollamaEmbeddingModels: data.ollamaEmbeddingModels || [],
+        recallAvailable: data.recallAvailable,
+        recallLatency: data.recallLatency,
+        autoRecall: data.autoRecall,
         issues: data.issues || []
       })
     } catch (error) {
@@ -814,6 +820,29 @@ export function DeviceMonitor() {
                 <span className="text-[10px] text-white/50">Embedding 模型</span>
                 <span className="text-[10px] text-cyan-400">
                   {vectorMemory.embeddingModel || '未配置'}
+                </span>
+              </div>
+              
+              {/* Recall 功能状态 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">Recall 功能</span>
+                <span className="text-[10px]" style={{
+                  color: vectorMemory.recallAvailable ? '#00FF66' : '#FF4444'
+                }}>
+                  {vectorMemory.recallAvailable
+                    ? `正常 (${vectorMemory.recallLatency}ms)`
+                    : '不可用'
+                  }
+                </span>
+              </div>
+              
+              {/* Auto Recall 配置 */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-white/50">自动 Recall</span>
+                <span className="text-[10px]" style={{
+                  color: vectorMemory.autoRecall ? '#00FF66' : '#FFAA00'
+                }}>
+                  {vectorMemory.autoRecall ? '已启用' : '未启用'}
                 </span>
               </div>
               

@@ -97,7 +97,6 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null) // 消息列表底部 ref，用于自动滚屏
   const [isSleeping, setIsSleeping] = useState(false)
   const [isTerminalOpen, setIsTerminalOpen] = useState(false) // Terminal 弹窗状态
-  const [appVersion, setAppVersion] = useState('v2.0.0') // 应用版本号
   const [isAnimating, setIsAnimating] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [celebrationTrigger, setCelebrationTrigger] = useState(0)
@@ -1226,6 +1225,11 @@ const formatTimestamp = (timestamp: number): string => {
                     </div>
                   </motion.button>
                 </form>
+                
+                {/* 版本号显示在输入框最下面一行 */}
+                <div className="text-center text-[10px] text-gray-600 mt-2">
+                  MeetClaw v2.3
+                </div>
               </div>
             </div>
           </div>
@@ -1378,11 +1382,9 @@ const formatTimestamp = (timestamp: number): string => {
           
         </div>
         
-        {/* 左下角版权和版本信息 */}
+        {/* 左下角版权和版本信息 - 只显示版权 */}
         <div className="absolute bottom-4 left-4 z-20">
-          {/* 版权和版本信息 */}
           <div className="flex flex-col text-xs text-gray-500">
-            <div>YSK Premium {appVersion}</div>
             <div>Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a></div>
             <div>© 2026 All Rights Reserved</div>
           </div>

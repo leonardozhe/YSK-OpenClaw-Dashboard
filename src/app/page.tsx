@@ -1382,11 +1382,10 @@ const formatTimestamp = (timestamp: number): string => {
           
         </div>
         
-        {/* 左下角版权和版本信息 - 只显示版权 */}
-        <div className="absolute bottom-4 left-4 z-20">
-          <div className="flex flex-col text-xs text-gray-500">
-            <div>Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a></div>
-            <div>© 2026 All Rights Reserved</div>
+        {/* 底部中间版权信息 */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+          <div className="text-xs text-gray-500">
+            Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved
           </div>
         </div>
         

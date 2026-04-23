@@ -1,6 +1,6 @@
 # YSK - OpenClaw Dashboard
 
-[![Version](https://img.shields.io/badge/version-1.2%20Beta-orange)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases)
+[![Version](https://img.shields.io/badge/version-2.3-cyan)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org)
 [![License](https://img.shields.io/badge/license-YSK%20Fan%20Exclusive-red)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard#-license)
 
@@ -123,6 +123,29 @@ MIT License
 - ✅ YSK 会员粉丝可以免费使用本软件
 - ❌ 禁止用于任何商业用途
 - ❌ 禁止转售、分发或作为商业服务的一部分
+
+---
+
+## 📦 V2.3 更新内容
+
+### ✨ 新功能
+- **配置持久化导出/导入** - 设置弹窗新增配置管理功能，支持导出/导入/重置配置
+- **24小时版本自动检测** - 每24小时检测GitHub Releases，发现新版本自动提示
+- **向量记忆Recall检测** - 左侧监控面板新增向量记忆Recall功能状态检测（延迟检测）
+
+### 🔧 修复
+- 向量记忆插件检测优化 - 支持全局npm路径检测
+- 版权信息布局修复 - 底部信息正确显示在聊天框下方，不重叠
+- 配置导出优化 - 只导出系统设置，不包含聊天记录
+
+### 📊 左侧监控面板增强
+- 向量记忆状态：LanceDB插件、Recall功能、自动Recall、Ollama状态
+- 新增待解决问题列表
+
+### 🎨 UI优化
+- 版本号移至底部中间：Powered by ClawBang.cn © 2026 All Rights Reserved V2.3
+- 新版本提示按钮（带动画效果）
+- 配置管理区域：导出配置、导入配置、重置设置
 
 ---
 

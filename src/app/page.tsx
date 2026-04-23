@@ -1227,9 +1227,6 @@ const formatTimestamp = (timestamp: number): string => {
                 </form>
                 
                 {/* 版本号显示在输入框最下面一行 */}
-                <div className="text-center text-[10px] text-gray-600 mt-2">
-                  MeetClaw v2.3
-                </div>
               </div>
             </div>
           </div>
@@ -1385,7 +1382,7 @@ const formatTimestamp = (timestamp: number): string => {
         {/* 底部中间版权信息 */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
           <div className="text-xs text-gray-500">
-            Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved
+            Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3
           </div>
         </div>
         

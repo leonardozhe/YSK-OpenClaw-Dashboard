@@ -562,6 +562,47 @@ interface VectorMemoryStatus {
   issues: string[]
 }
 
+// 前端检测 Ollama（检测用户本地机器）
+function checkLocalOllama(): Promise<{ running: boolean; models: string[] }> {
+  return new Promise((resolve) => {
+    const ports = [11434, 11435]
+    let checked = 0
+    
+    function check(port: number) {
+      const timeout = 2000
+      const timer = setTimeout(() => {
+        if (++checked >= ports.length * 2) resolve({ running: false, models: [] })
+      }, timeout)
+      
+      fetch(`http://127.0.0.1:${port}/api/tags`)
+        .then(res => res.json())
+        .then(data => {
+          clearTimeout(timer)
+          const models = (data.models || []).map((m: { name: string }) => m.name)
+          resolve({ running: true, models })
+        })
+        .catch(() => {
+          if (++checked >= ports.length * 2) {
+            clearTimeout(timer)
+            // 尝试 localhost
+            fetch('http://localhost:11434/api/tags')
+              .then(res => res.json())
+              .then(data => {
+                const models = (data.models || []).map((m: { name: string }) => m.name)
+                resolve({ running: true, models })
+              })
+              .catch(() => resolve({ running: false, models: [] }))
+          }
+        })
+    }
+    
+    ports.forEach(check)
+    ports.forEach(check)
+    
+    setTimeout(() => resolve({ running: false, models: [] }), 3000)
+  })
+}
+
 export function DeviceMonitor() {
   const [systemData, setSystemData] = useState<RealSystemData | null>(null)
   const [providers, setProviders] = useState<ProviderData[]>([])
@@ -588,15 +629,24 @@ export function DeviceMonitor() {
   // 获取向量记忆状态
   const fetchVectorMemory = useCallback(async () => {
     try {
-      const response = await fetch('/api/vector-memory-status')
+      // 并行检测：后端检测 + 前端本地检测
+      const [response, localOllama] = await Promise.all([
+        fetch('/api/vector-memory-status'),
+        checkLocalOllama()
+      ])
       const data = await response.json()
+      
+      // 使用本地检测结果（更可靠），如果失败则使用后端结果
+      const ollamaRunning = localOllama.running ? localOllama.running : data.ollamaRunning
+      const localModels = localOllama.models.length > 0 ? localOllama.models : (data.ollamaEmbeddingModels || [])
+      
       setVectorMemory({
         enabled: data.enabled,
         pluginInstalled: data.pluginInstalled,
         pluginEnabled: data.pluginEnabled,
         embeddingModel: data.embeddingModel,
-        ollamaRunning: data.ollamaRunning,
-        ollamaEmbeddingModels: data.ollamaEmbeddingModels || [],
+        ollamaRunning: ollamaRunning,
+        ollamaEmbeddingModels: localModels,
         recallAvailable: data.recallAvailable,
         recallLatency: data.recallLatency,
         autoRecall: data.autoRecall,
@@ -715,7 +765,7 @@ export function DeviceMonitor() {
   const activatedCount = providers.filter(p => p.activated).length
 
   return (
-    <div className="w-80 flex flex-col gap-4 p-4 overflow-y-auto">
+    <div className="flex flex-col gap-4 p-4 overflow-y-auto h-full">
       {/* 本地机器 - 真实状态 */}
       <div>
         <div className="flex items-center justify-between mb-3">

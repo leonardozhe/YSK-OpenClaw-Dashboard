@@ -26,12 +26,32 @@ interface VectorMemoryStatus {
   issues: string[]
 }
 
-// 检查 Ollama 是否运行并获取 embedding 模型
-async function checkOllamaEmbeddingModels(): Promise<{ running: boolean; models: string[] }> {
+// 检查 Ollama 是否运行并获取本地模型（后端检测）
+// 注意：如果后端和Ollama不在同一台机器，这个检测会失败
+// 所以前端也有检测逻辑
+async function checkOllamaBackend(): Promise<{ running: boolean; models: string[] }> {
+  const ports = [11434, 11435]
+  for (const port of ports) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/tags`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(2000)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const models = (data.models || []).map((m: { name: string }) => m.name)
+        return { running: true, models }
+      }
+    } catch {
+      continue
+    }
+  }
+  
+  // 尝试 localhost
   try {
     const response = await fetch('http://localhost:11434/api/tags', {
       method: 'GET',
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(2000)
     })
     if (response.ok) {
       const data = await response.json()
@@ -39,8 +59,9 @@ async function checkOllamaEmbeddingModels(): Promise<{ running: boolean; models:
       return { running: true, models }
     }
   } catch {
-    // Ollama 未运行
+    // ignore
   }
+  
   return { running: false, models: [] }
 }
 
@@ -213,7 +234,7 @@ export async function GET() {
     }
     
     // 检查 Ollama 状态和 embedding 模型
-    const { running: ollamaRunning, models: ollamaModels } = await checkOllamaEmbeddingModels()
+    const { running: ollamaRunning, models: ollamaModels } = await checkOllamaBackend()
     
     // 检测嵌入式模型是否可用
     let embeddingAvailable = false

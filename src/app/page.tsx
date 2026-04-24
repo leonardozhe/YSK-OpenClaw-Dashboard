@@ -781,13 +781,23 @@ const formatTimestamp = (timestamp: number): string => {
       <div className="fixed inset-0 cyber-grid pointer-events-none z-0" />
       
       {/* 主容器 */}
-      <div className="relative z-10 flex h-screen">
-        {/* 左侧设备监控 */}
-        <div className="border-r flex flex-col" style={{
+      <div className="relative z-10 flex h-screen overflow-hidden">
+        {/* 左侧设备监控 - 响应式宽度 */}
+        <div className="hidden lg:block border-r flex-shrink-0 w-80" style={{
           background: 'rgba(8, 8, 12, 0.6)',
           borderColor: 'rgba(255, 255, 255, 0.06)'
         }}>
           <DeviceMonitor />
+        </div>
+        <div className="lg:hidden border-r flex-shrink-0 w-16" style={{
+          background: 'rgba(8, 8, 12, 0.6)',
+          borderColor: 'rgba(255, 255, 255, 0.06)'
+        }}>
+          <div className="flex items-center justify-center h-full">
+            <svg className="w-8 h-8 text-cyan-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
         </div>
         
         {/* 中间区域 - 背景内容 */}

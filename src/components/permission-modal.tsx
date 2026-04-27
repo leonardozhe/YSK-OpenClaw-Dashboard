@@ -72,8 +72,8 @@ export function PermissionModal({ onAccept, onDecline }: PermissionModalProps) {
               {/* 欢迎说明 */}
               <div className="space-y-4 text-sm">
                 <div className="p-3 rounded-lg" style={{ background: 'rgba(0, 240, 255, 0.05)' }}>
-                  <p className="text-cyan-400 font-semibold mb-1">欢迎使用 YSK - OpenClaw Dashboard v1.2 Beta</p>
-                  <p className="text-gray-300">本软件由 YSK 团队开发，用于监控和管理 OpenClaw 设备。</p>
+                  <p className="text-cyan-400 font-semibold mb-1">欢迎使用 MeetClaw V2.3</p>
+                  <p className="text-gray-300">MeetClaw 是 YSK 团队开发的 OpenClaw 设备监控与管理平台。</p>
                 </div>
 
                 <div className="space-y-2">

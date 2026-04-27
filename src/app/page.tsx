@@ -255,14 +255,16 @@ export default function Home() {
         if (!response.ok) return
         
         const data = await response.json()
+        
+        // 无论是否有更新都设置状态
+        setUpdateInfo({
+          hasUpdate: data.hasUpdate,
+          latestVersion: data.latestVersion || data.currentVersion,
+          releaseUrl: data.release?.html_url || 'https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases'
+        })
+        
+        // 如果有更新，弹窗提示
         if (data.hasUpdate) {
-          setUpdateInfo({
-            hasUpdate: true,
-            latestVersion: data.latestVersion,
-            releaseUrl: data.release?.html_url || 'https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases'
-          })
-          
-          // 检查是否已经提示过这个版本
           const lastPromptedVersion = localStorage.getItem('meetclaw-last-prompted-version')
           if (lastPromptedVersion !== data.latestVersion) {
             setShowUpdateModal(true)

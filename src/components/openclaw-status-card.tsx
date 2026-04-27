@@ -457,7 +457,13 @@ export function OpenClawStatusCard() {
                   background: 'rgba(0, 240, 255, 0.15)',
                   color: '#00F0FF'
                 }}>
-                  Tailscale {status.networks.tailscale.ip && `· ${status.networks.tailscale.ip}`}
+                  Tailscale
+                  {status.networks.tailscale.status === 'Running' && (
+                    <span className="ml-1 text-emerald-400">运行中</span>
+                  )}
+                  {status.networks.tailscale.ip && (
+                    <span className="ml-1 opacity-70">{status.networks.tailscale.ip}</span>
+                  )}
                 </span>
               )}
               {status.networks.zerotier.running && (
@@ -465,7 +471,13 @@ export function OpenClawStatusCard() {
                   background: 'rgba(168, 85, 247, 0.15)',
                   color: '#a855f7'
                 }}>
-                  ZeroTier {status.networks.zerotier.networkCount > 0 && `· ${status.networks.zerotier.networkCount} 网络`}
+                  ZeroTier
+                  {status.networks.zerotier.networkCount > 0 && (
+                    <span className="ml-1 opacity-70">{status.networks.zerotier.networkCount} 网络</span>
+                  )}
+                  {status.networks.zerotier.ip && (
+                    <span className="ml-1 opacity-70">{status.networks.zerotier.ip}</span>
+                  )}
                 </span>
               )}
             </div>

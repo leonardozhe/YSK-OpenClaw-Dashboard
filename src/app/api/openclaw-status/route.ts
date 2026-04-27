@@ -706,16 +706,51 @@ export async function GET() {
       zerotier: { running: false, ip: null as string | null, networkCount: 0 }
     }
     
-    // 检测 Tailscale
+    // 检测 Tailscale - 使用多种方式获取 IP
     try {
-      const { stdout: tsStatus } = await execAsync('tailscale status --json 2>/dev/null || echo "{}"', { timeout: 5000 })
-      if (tsStatus.trim() && tsStatus.trim() !== '{}') {
-        const tsData = JSON.parse(tsStatus)
-        networks.tailscale.running = tsData.Self !== undefined || tsData.BackendState === 'Running'
-        if (tsData.Self?.TailAddr) networks.tailscale.ip = tsData.Self.TailAddr
-        if (tsData.BackendState) networks.tailscale.status = tsData.BackendState
+      // 方法 1：直接获取 IP（更可靠）
+      const { stdout: tsIP } = await execAsync('tailscale ip -4 2>/dev/null', { timeout: 5000 })
+      if (tsIP.trim() && /^[\d.]+$/.test(tsIP.trim())) {
+        networks.tailscale.running = true
+        networks.tailscale.ip = tsIP.trim()
       }
-    } catch { /* Tailscale 未安装 */ }
+      
+      // 方法 2：获取状态
+      try {
+        const { stdout: tsStatus } = await execAsync('tailscale status --json 2>/dev/null || echo "{}"', { timeout: 5000 })
+        if (tsStatus.trim() && tsStatus.trim() !== '{}') {
+          const tsData = JSON.parse(tsStatus)
+          if (!networks.tailscale.running) {
+            networks.tailscale.running = tsData.Self !== undefined || tsData.BackendState === 'Running'
+          }
+          // 如果方法 1 没获取到 IP，尝试从 JSON 中获取
+          if (!networks.tailscale.ip && tsData.Self) {
+            const self = tsData.Self
+            // Try multiple fields for IP
+            networks.tailscale.ip = self.TailAddr || 
+              (self.TailscaleIPs && self.TailscaleIPs[0]) || 
+              (self.IPAddresses && self.IPAddresses[0]) || null
+          }
+          if (tsData.BackendState && !networks.tailscale.status) {
+            networks.tailscale.status = tsData.BackendState
+          }
+          // Fallback to root TailscaleIPs
+          if (!networks.tailscale.ip && tsData.TailscaleIPs && tsData.TailscaleIPs.length > 0) {
+            networks.tailscale.ip = tsData.TailscaleIPs[0]
+          }
+        }
+      } catch {}
+      
+      // 方法 3：如果都没获取到，检查 tailscale 是否在运行
+      if (!networks.tailscale.running) {
+        try {
+          await execAsync('pgrep -f tailscaled 2>/dev/null || pgrep -f "tailscale" 2>/dev/null', { timeout: 2000 })
+          networks.tailscale.running = true
+        } catch {}
+      }
+    } catch {
+      // Tailscale 未安装
+    }
     
     // 检测 ZeroTier
     try {

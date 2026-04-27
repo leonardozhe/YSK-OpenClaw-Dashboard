@@ -800,10 +800,6 @@ export function DeviceMonitor() {
           {providers.length === 1 && (
             <div className="w-2 h-2 rounded-full" style={{ background: providers[0].activated ? '#00FF66' : '#FFAA00', boxShadow: `0 0 6px ${providers[0].activated ? '#00FF66' : '#FFAA00'}` }} />
           )}
-          {/* 单供应商时显示状态点 */}
-          {providers.length === 1 && (
-            <div className="w-2 h-2 rounded-full" style={{ background: providers[0].activated ? '#00FF66' : '#FFAA00', boxShadow: `0 0 6px ${providers[0].activated ? '#00FF66' : '#FFAA00'}` }} />
-          )}
         </div>
         <div className="space-y-2">
           {providers.length === 0 ? (

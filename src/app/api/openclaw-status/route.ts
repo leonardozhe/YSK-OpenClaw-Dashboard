@@ -120,11 +120,11 @@ interface OpenClawStatus {
     enabled: boolean
     status: string
   }[]
-  networks: {
+  networks?: {
     tailscale: { running: boolean; ip: string | null; status: string | null }
     zerotier: { running: boolean; ip: string | null; networkCount: number }
   }
-  skills: {
+  skills?: {
     installed: number
     activated: number
   }

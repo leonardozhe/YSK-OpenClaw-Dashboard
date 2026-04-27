@@ -1292,17 +1292,21 @@ const formatTimestamp = (timestamp: number): string => {
                   发现新版本 V{updateInfo.latestVersion}，点击升级
                 </motion.button>
               ) : updateInfo?.latestVersion && !updateInfo.hasUpdate ? (
-                <div className="px-2 py-0.5 rounded-full text-[10px] font-medium" style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  color: '#10b981'
-                }}>
+                <button
+                  onClick={() => setShowUpdateModal(true)}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all hover:scale-105"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: '#10b981'
+                  }}
+                >
                   ✓ 当前已是最新版 V{updateInfo.latestVersion}
-                </div>
+                </button>
               ) : null}
               
               <div className="text-xs text-gray-500">
-                Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3
+                Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved
               </div>
             </div>
           </div>
@@ -1656,9 +1660,9 @@ const formatTimestamp = (timestamp: number): string => {
         />
       )}
       
-      {/* 新版本提示弹窗 */}
+      {/* 版本更新弹窗 */}
       <AnimatePresence>
-        {showUpdateModal && updateInfo?.hasUpdate && (
+        {showUpdateModal && updateInfo && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
@@ -1667,11 +1671,11 @@ const formatTimestamp = (timestamp: number): string => {
           >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowUpdateModal(false)} />
             <motion.div
-              className="relative w-full max-w-md rounded-2xl overflow-hidden"
+              className="relative w-full max-w-lg rounded-2xl overflow-hidden"
               style={{
                 background: 'rgba(15, 15, 25, 0.98)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                boxShadow: '0 0 60px rgba(16, 185, 129, 0.2)'
+                border: `1px solid ${updateInfo.hasUpdate ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                boxShadow: `0 0 60px ${updateInfo.hasUpdate ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
               }}
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
@@ -1679,14 +1683,24 @@ const formatTimestamp = (timestamp: number): string => {
               transition={{ duration: 0.2 }}
             >
               {/* 头部 */}
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(16, 185, 129, 0.2)' }}>
-                    <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-18.356-2M4.582 9A8.003 8.003 0 0119.418 15M9 19V9m6 10V9" />
-                    </svg>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ 
+                    background: updateInfo.hasUpdate ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)' 
+                  }}>
+                    {updateInfo.hasUpdate ? (
+                      <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-18.356-2M4.582 9A8.003 8.003 0 0119.418 15M9 19V9m6 10V9" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
                   </div>
-                  <h3 className="text-base font-medium text-white">发现新版本 V{updateInfo.latestVersion}</h3>
+                  <h3 className="text-base font-medium text-white">
+                    {updateInfo.hasUpdate ? `发现新版本 V${updateInfo.latestVersion}` : `当前已是最新版 V${updateInfo.latestVersion}`}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowUpdateModal(false)}
@@ -1699,25 +1713,110 @@ const formatTimestamp = (timestamp: number): string => {
               </div>
               
               {/* 内容 */}
-              <div className="px-5 py-4">
-                <p className="text-sm text-gray-400 mb-3">
-                  MeetClaw 已发布新版本，建议升级到最新版以获取最新功能和修复。
-                </p>
+              <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+                {updateInfo.hasUpdate ? (
+                  <>
+                    <p className="text-sm text-gray-400 mb-4">
+                      MeetClaw 已发布新版本，请选择一种方式升级：
+                    </p>
+                    
+                    {/* 方式一：终端命令升级 */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        方式一：终端命令升级
+                      </h4>
+                      <div className="rounded-lg p-3 font-mono text-xs text-gray-300" style={{ background: 'rgba(0, 0, 0, 0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <p className="text-gray-500 mb-1"># 进入项目目录</p>
+                        <p className="mb-2">cd ~/Documents/Development/openclaw/meetclaw-open-tauri-in-progress</p>
+                        <p className="text-gray-500 mb-1"># 拉取最新代码</p>
+                        <p className="mb-2">git pull origin main</p>
+                        <p className="text-gray-500 mb-1"># 安装依赖</p>
+                        <p className="mb-2">npm install</p>
+                        <p className="text-gray-500 mb-1"># 重新构建并启动</p>
+                        <p className="mb-2">npm run build &amp;&amp; npm start</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const cmd = `cd ~/Documents/Development/openclaw/meetclaw-open-tauri-in-progress && git pull origin main && npm install && npm run build && npm start`
+                          navigator.clipboard.writeText(cmd)
+                          alert('命令已复制到剪贴板')
+                        }}
+                        className="mt-2 px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center gap-2"
+                        style={{
+                          background: 'rgba(0, 240, 255, 0.1)',
+                          border: '1px solid rgba(0, 240, 255, 0.3)',
+                          color: '#00F0FF'
+                        }}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        复制完整命令
+                      </button>
+                    </div>
+                    
+                    {/* 方式二：AI Agent 升级 */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        方式二：AI Agent 升级（龙虾 / OpenClaw）
+                      </h4>
+                      <div className="rounded-lg p-3 font-mono text-xs text-gray-300" style={{ background: 'rgba(0, 0, 0, 0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <p className="text-gray-500 mb-2">// 复制以下指令，发送给龙虾或其他 Agent</p>
+                        <p className="mb-1">请帮我更新 MeetClaw Dashboard：</p>
+                        <p className="mb-1">1. 进入项目目录并执行 git pull origin main</p>
+                        <p className="mb-1">2. 运行 npm install 安装新依赖</p>
+                        <p className="mb-1">3. 运行 npm run build 重新构建</p>
+                        <p>4. 重启服务并确认运行正常</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const agentCmd = `请帮我更新 MeetClaw Dashboard：\n\n1. 进入项目目录并执行 git pull origin main\n2. 运行 npm install 安装新依赖\n3. 运行 npm run build 重新构建\n4. 重启服务并确认运行正常`
+                          navigator.clipboard.writeText(agentCmd)
+                          alert('Agent 升级指令已复制到剪贴板')
+                        }}
+                        className="mt-2 px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center gap-2"
+                        style={{
+                          background: 'rgba(168, 85, 247, 0.1)',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          color: '#a855f7'
+                        }}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        复制 Agent 指令
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 mb-4">
+                    恭喜！您的 MeetClaw 已是最新版本，无需升级。
+                  </p>
+                )}
+                
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowUpdateModal(false)}
                     className="flex-1 px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                   >
-                    稍后提醒
+                    {updateInfo.hasUpdate ? '稍后提醒' : '关闭'}
                   </button>
-                  <a
-                    href={updateInfo.releaseUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-center bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-                  >
-                    查看更新
-                  </a>
+                  {updateInfo.hasUpdate && (
+                    <a
+                      href={updateInfo.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-center bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                    >
+                      查看更新详情
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>

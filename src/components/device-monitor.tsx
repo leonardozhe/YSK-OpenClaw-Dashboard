@@ -556,20 +556,6 @@ interface VectorMemoryStatus {
   issues: string[]
 }
 
-// 网络状态接口
-interface NetworkStatus {
-  tailscale: {
-    running: boolean
-    ip: string | null
-    status: string | null
-  }
-  zerotier: {
-    running: boolean
-    ip: string | null
-    networks: Array<{ networkId: string; status: string }>
-  }
-}
-
 // 前端检测 Ollama（检测用户本地机器）
 function checkLocalOllama(): Promise<{ running: boolean; models: string[] }> {
   return new Promise((resolve) => {
@@ -617,7 +603,6 @@ export function DeviceMonitor() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeProviderIndex, setActiveProviderIndex] = useState(0)
   const [vectorMemory, setVectorMemory] = useState<VectorMemoryStatus | null>(null)
-  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(null)
 
   // 获取系统信息
   const fetchSystemInfo = useCallback(async () => {
@@ -632,19 +617,6 @@ export function DeviceMonitor() {
       console.error('Failed to fetch system info:', error)
     } finally {
       setIsLoading(false)
-    }
-  }, [])
-
-  // 获取网络状态
-  const fetchNetworkStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/api/network-status')
-      const data = await response.json()
-      if (data.tailscale || data.zerotier) {
-        setNetworkStatus(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch network status:', error)
     }
   }, [])
 
@@ -764,14 +736,12 @@ export function DeviceMonitor() {
     // 初始化所有数据
     fetchSystemInfo()
     fetchProviders()
-    fetchNetworkStatus()
     fetchVectorMemory()
 
     // 每 15 分钟刷新一次完整信息（包含 token、版本、安全审计等）
     const fullRefreshInterval = setInterval(() => {
       fetchSystemInfo()
       fetchProviders()
-      fetchNetworkStatus()
       fetchVectorMemory()
     }, 900000) // 15 分钟 = 15 * 60 * 1000 毫秒
 
@@ -782,7 +752,7 @@ export function DeviceMonitor() {
       clearInterval(fullRefreshInterval)
       clearInterval(latencyRefreshInterval)
     }
-  }, [fetchSystemInfo, fetchProviders, fetchNetworkStatus, fetchVectorMemory, refreshLatencies])
+  }, [fetchSystemInfo, fetchProviders, fetchVectorMemory, refreshLatencies])
 
   // 统计使用中的模型数量
   const inUseCount = providers.filter(p => p.models.some(m => m.inUse)).length
@@ -797,41 +767,7 @@ export function DeviceMonitor() {
             <Monitor className="w-4 h-4" />
             本地设备
           </h3>
-          <div className="flex items-center gap-1.5">
-            {/* Tailscale 状态 */}
-            {networkStatus?.tailscale?.running && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px]" style={{
-                background: 'rgba(0, 240, 255, 0.15)',
-                border: '1px solid rgba(0, 240, 255, 0.3)',
-                color: '#00F0FF'
-              }}>
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                </svg>
-                Tailscale
-                {networkStatus.tailscale.ip && (
-                  <span style={{ opacity: 0.7 }}>{networkStatus.tailscale.ip}</span>
-                )}
-              </div>
-            )}
-            {/* ZeroTier 状态 */}
-            {networkStatus?.zerotier?.running && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px]" style={{
-                background: 'rgba(168, 85, 247, 0.15)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-                color: '#a855f7'
-              }}>
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                </svg>
-                ZeroTier
-                {networkStatus.zerotier.networks.length > 0 && (
-                  <span style={{ opacity: 0.7 }}>({networkStatus.zerotier.networks.length})</span>
-                )}
-              </div>
-            )}
-            <div className="w-2 h-2 rounded-full animate-pulse" />
-          </div>
+          <div className="w-2 h-2 rounded-full animate-pulse" />
         </div>
         <LocalMachineCard data={systemData} />
       </div>

@@ -35,6 +35,14 @@ interface OpenClawStatus {
     name: string
     enabled: boolean
   }[]
+  networks: {
+    tailscale: { running: boolean; ip: string | null; status: string | null }
+    zerotier: { running: boolean; ip: string | null; networkCount: number }
+  }
+  skills: {
+    installed: number
+    activated: number
+  }
   sessions: {
     active: number
     contextTokens: number
@@ -75,6 +83,11 @@ export function OpenClawStatusCard() {
         service: { status: 'unknown', pid: null, label: 'unknown' },
         securityAudit: { critical: 0, warn: 0, info: 0, details: [] },
         channels: [],
+        networks: {
+          tailscale: { running: false, ip: null, status: null },
+          zerotier: { running: false, ip: null, networkCount: 0 }
+        },
+        skills: { installed: 0, activated: 0 },
         sessions: { active: 0, contextTokens: 0 },
         dashboard: '',
         health: 'unknown',
@@ -415,7 +428,7 @@ export function OpenClawStatusCard() {
             </div>
           </div>
           
-          {/* 右侧信息：RPC */}
+          {/* 右侧信息：RPC + 网络状态 */}
           <div className="text-right">
             {/* RPC 状态 */}
             {status?.rpc?.ok !== undefined && (
@@ -428,6 +441,59 @@ export function OpenClawStatusCard() {
             )}
           </div>
         </div>
+
+        {/* 网络状态 - Tailscale / ZeroTier */}
+        {status?.networks && (status.networks.tailscale.running || status.networks.zerotier.running) && (
+          <div className="mb-2 p-1.5 rounded-lg" style={{ background: 'rgba(6, 182, 212, 0.05)' }}>
+            <div className="flex items-center gap-2 text-[10px] flex-wrap">
+              <span className="text-white/40 flex items-center gap-1">
+                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+                </svg>
+                网络
+              </span>
+              {status.networks.tailscale.running && (
+                <span className="px-1.5 py-0.5 rounded-full" style={{
+                  background: 'rgba(0, 240, 255, 0.15)',
+                  color: '#00F0FF'
+                }}>
+                  Tailscale {status.networks.tailscale.ip && `· ${status.networks.tailscale.ip}`}
+                </span>
+              )}
+              {status.networks.zerotier.running && (
+                <span className="px-1.5 py-0.5 rounded-full" style={{
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  color: '#a855f7'
+                }}>
+                  ZeroTier {status.networks.zerotier.networkCount > 0 && `· ${status.networks.zerotier.networkCount} 网络`}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Skills 信息 */}
+        {status?.skills && status.skills.installed > 0 && (
+          <div className="mb-2 p-1.5 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)' }}>
+            <div className="flex justify-between items-center text-[10px]">
+              <div className="flex items-center gap-1">
+                <svg className="w-2.5 h-2.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span className="text-white/40">Skills</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400">{status.skills.installed} 已安装</span>
+                {status.skills.activated > 0 && (
+                  <>
+                    <span className="text-white/30">·</span>
+                    <span className="text-amber-400">{status.skills.activated} 已激活</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Token 消耗 */}
         {status?.sessions?.contextTokens !== undefined && status.sessions.contextTokens > 0 && (

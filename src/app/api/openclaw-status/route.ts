@@ -120,6 +120,14 @@ interface OpenClawStatus {
     enabled: boolean
     status: string
   }[]
+  networks: {
+    tailscale: { running: boolean; ip: string | null; status: string | null }
+    zerotier: { running: boolean; ip: string | null; networkCount: number }
+  }
+  skills: {
+    installed: number
+    activated: number
+  }
   sessions: {
     active: number
     contextTokens: number
@@ -692,6 +700,65 @@ export async function GET() {
       latestVersion = await getLatestVersion()
     }
     
+    // 获取网络状态（Tailscale / ZeroTier）
+    const networks = {
+      tailscale: { running: false, ip: null as string | null, status: null as string | null },
+      zerotier: { running: false, ip: null as string | null, networkCount: 0 }
+    }
+    
+    // 检测 Tailscale
+    try {
+      const { stdout: tsStatus } = await execAsync('tailscale status --json 2>/dev/null || echo "{}"', { timeout: 5000 })
+      if (tsStatus.trim() && tsStatus.trim() !== '{}') {
+        const tsData = JSON.parse(tsStatus)
+        networks.tailscale.running = tsData.Self !== undefined || tsData.BackendState === 'Running'
+        if (tsData.Self?.TailAddr) networks.tailscale.ip = tsData.Self.TailAddr
+        if (tsData.BackendState) networks.tailscale.status = tsData.BackendState
+      }
+    } catch { /* Tailscale 未安装 */ }
+    
+    // 检测 ZeroTier
+    try {
+      const { stdout: ztInfo } = await execAsync('zerotier-cli info 2>/dev/null || echo "NOT_RUNNING"', { timeout: 5000 })
+      if (!ztInfo.includes('NOT_RUNNING') && !ztInfo.includes('cannot')) {
+        networks.zerotier.running = true
+        const ipMatch = ztInfo.match(/(\d+\.\d+\.\d+\.\d+)/)
+        if (ipMatch) networks.zerotier.ip = ipMatch[1]
+        
+        // 获取网络数量
+        try {
+          const { stdout: ztNetworks } = await execAsync('zerotier-cli listnetworks -j 2>/dev/null || echo "[]"', { timeout: 5000 })
+          const nwList = JSON.parse(ztNetworks.trim())
+          if (Array.isArray(nwList)) {
+            networks.zerotier.networkCount = nwList.filter((n: any) => n.status === 'OK').length
+          }
+        } catch {}
+      }
+    } catch { /* ZeroTier 未安装 */ }
+    
+    // 获取 Skill 数量
+    const skills = { installed: 0, activated: 0 }
+    try {
+      const skillsDir = join(homedir(), '.openclaw', 'skills')
+      if (existsSync(skillsDir)) {
+        const items = readdirSync(skillsDir)
+        skills.installed = items.filter(item => {
+          const itemPath = join(skillsDir, item)
+          return existsSync(join(itemPath, 'package.json')) || existsSync(join(itemPath, 'skill.json'))
+        }).length
+        
+        // 检查已激活的数量（从配置中读取）
+        const skillConfigs = config.skills || config.skill || {}
+        if (Array.isArray(skillConfigs)) {
+          skills.activated = skillConfigs.filter((s: any) => s.enabled !== false).length
+        } else if (typeof skillConfigs === 'object') {
+          skills.activated = Object.values(skillConfigs).filter((s: any) => (s as any).enabled !== false).length
+        } else if (skillConfigs === true || skillConfigs === 'all') {
+          skills.activated = skills.installed
+        }
+      }
+    } catch { /* skills 目录不存在 */ }
+    
     const response: OpenClawStatus = {
       version: statusData.version || 'unknown',
       latestVersion: latestVersion,
@@ -699,6 +766,8 @@ export async function GET() {
       service: statusData.service || { status: 'unknown', pid: null, label: 'unknown', uptime: null },
       securityAudit: statusData.securityAudit || { critical: 0, warn: 0, info: 0, details: [] },
       channels: statusData.channels || [],
+      networks,
+      skills,
       sessions: statusData.sessions || { active: 0, contextTokens: 0, sessionTokens: 0, last30DaysTokens: 0, totalTokens: 0, recent: null },
       agents: statusData.agents || { defaultId: 'main', count: 0, totalSessions: 0 },
       dashboard: statusData.dashboard || '',

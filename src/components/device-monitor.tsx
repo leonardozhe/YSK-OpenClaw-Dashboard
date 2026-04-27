@@ -137,7 +137,7 @@ interface ProviderModel {
   id: string
   name: string
   inUse: boolean
-  status: 'work' | 'config'
+  status: 'active' | 'config'
 }
 
 interface ProviderData {
@@ -378,19 +378,19 @@ function LocalMachineCard({ data }: { data: RealSystemData | null }) {
 function ProviderCard({ provider, index }: { provider: ProviderData; index: number }) {
   const [showAll, setShowAll] = useState(false)
   
-  // 分离工作和配置模型
-  const workModels = provider.models.filter(m => m.status === 'work')
+  // 分离激活和配置模型
+  const activeModels = provider.models.filter(m => m.status === 'active')
   const configModels = provider.models.filter(m => m.status === 'config')
   
   // 判断供应商是否处于激活状态
   const isProviderActivated = provider.activated
-  const hasWorkModels = workModels.length > 0
+  const hasActiveModels = activeModels.length > 0
   
-  // 工作模型超过 5 个时，默认只显示前 5 个
-  const MAX_VISIBLE_WORK = 5
-  const visibleWorkModels = workModels.slice(0, MAX_VISIBLE_WORK)
-  const hiddenWorkCount = Math.max(0, workModels.length - MAX_VISIBLE_WORK)
-  const totalHiddenCount = hiddenWorkCount + configModels.length
+  // 激活模型超过 5 个时，默认只显示前 5 个
+  const MAX_VISIBLE_ACTIVE = 5
+  const visibleActiveModels = activeModels.slice(0, MAX_VISIBLE_ACTIVE)
+  const hiddenActiveCount = Math.max(0, activeModels.length - MAX_VISIBLE_ACTIVE)
+  const totalHiddenCount = hiddenActiveCount + configModels.length
   const hasHiddenModels = totalHiddenCount > 0
 
   return (
@@ -467,12 +467,12 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
         </div>
       </div>
 
-      {/* 模型列表 - 工作模型（绿色）和配置模型（黄色） */}
+      {/* 模型列表 - 激活模型（绿色）和配置模型（黄色） */}
       <div className="relative">
         {provider.models.length > 0 ? (
           <div className="space-y-1">
-            {/* 工作模型 - 绿色，默认最多显示5个 */}
-            {visibleWorkModels.map(model => (
+            {/* 激活的模型 - 默认最多显示 5 个 */}
+            {visibleActiveModels.map(model => (
               <div key={model.id} className="flex items-center justify-between p-1.5 rounded-lg" style={{
                 background: 'rgba(0, 255, 102, 0.08)'
               }}>
@@ -481,13 +481,13 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
                   background: 'rgba(0, 255, 102, 0.2)',
                   color: '#00FF66'
                 }}>
-                  工作
+                  激活
                 </span>
               </div>
             ))}
             
-            {/* 隐藏的工作模型 - 展开时显示 */}
-            {showAll && workModels.slice(MAX_VISIBLE_WORK).map(model => (
+            {/* 隐藏的激活模型 - 展开时显示 */}
+            {showAll && activeModels.slice(MAX_VISIBLE_ACTIVE).map(model => (
               <motion.div
                 key={model.id}
                 className="flex items-center justify-between p-1.5 rounded-lg"
@@ -501,12 +501,12 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
                   background: 'rgba(0, 255, 102, 0.2)',
                   color: '#00FF66'
                 }}>
-                  工作
+                  激活
                 </span>
               </motion.div>
             ))}
             
-            {/* 已配置但未工作的模型 - 黄色 */}
+            {/* 已配置但未激活的模型 - 黄色 */}
             {configModels.map(model => (
               <motion.div
                 key={model.id}
@@ -525,10 +525,10 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
               </motion.div>
             ))}
             
-            {/* 无工作模型时的提示 */}
-            {workModels.length === 0 && configModels.length > 0 && (
+            {/* 无激活模型时的提示 */}
+            {activeModels.length === 0 && configModels.length > 0 && (
               <div className="p-1.5 rounded-lg text-center" style={{ background: 'rgba(255, 170, 0, 0.08)' }}>
-                <span className="text-[10px] text-white/50">暂无工作模型</span>
+                <span className="text-[10px] text-white/50">暂无激活模型</span>
               </div>
             )}
           </div>

@@ -1273,23 +1273,31 @@ const formatTimestamp = (timestamp: number): string => {
             borderColor: 'rgba(255, 255, 255, 0.06)'
           }}>
             <div className="flex items-center justify-center gap-3">
-              {/* 新版本提示按钮 */}
-              {updateInfo?.hasUpdate && (
+              {/* 版本状态提示 */}
+              {updateInfo?.hasUpdate ? (
                 <motion.button
                   onClick={() => setShowUpdateModal(true)}
                   className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all"
                   style={{
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid rgba(16, 185, 129, 0.4)',
-                    color: '#10b981'
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    color: '#f59e0b'
                   }}
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                   whileHover={{ scale: 1.1 }}
                 >
-                  发现新版本 V{updateInfo.latestVersion}
+                  发现新版本 V{updateInfo.latestVersion}，点击升级
                 </motion.button>
-              )}
+              ) : updateInfo?.latestVersion && !updateInfo.hasUpdate ? (
+                <div className="px-2 py-0.5 rounded-full text-[10px] font-medium" style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#10b981'
+                }}>
+                  ✓ 当前已是最新版 V{updateInfo.latestVersion}
+                </div>
+              ) : null}
               
               <div className="text-xs text-gray-500">
                 Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.3

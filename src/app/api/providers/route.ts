@@ -541,7 +541,15 @@ function getVendorInfo(providerId: string, baseUrl?: string): VendorInfo {
   }
 }
 
+// 缓存提供商数据
+let cachedProviders: { data: unknown; timestamp: number } | null = null
+const CACHE_TTL = 5 * 60 * 1000 // 5 分钟缓存
+
 export async function GET() {
+  // 检查缓存
+  if (cachedProviders && Date.now() - cachedProviders.timestamp < CACHE_TTL) {
+    return NextResponse.json(cachedProviders.data)
+  }
   try {
     const homeDir = homedir()
     const configPath = join(homeDir, '.openclaw', 'openclaw.json')
@@ -590,12 +598,12 @@ export async function GET() {
         const providerModels = (provider as Provider).models || []
 
         const models = providerModels.map(model => {
-          const isUsed = usedModels.includes(`${providerId}/${model.id}`) || primaryModel === `${providerId}/${model.id}`
+          const isActive = usedModels.includes(`${providerId}/${model.id}`) || primaryModel === `${providerId}/${model.id}`
           return {
             id: model.id,
             name: getModelDisplayName(model.id, model.name),
-            inUse: isUsed,
-            status: isUsed ? 'work' : 'config'
+            inUse: isActive,
+            status: isActive ? 'active' : 'config'
           }
         })
 
@@ -619,11 +627,16 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
+    const response = {
       providers,
       primaryModel,
       timestamp: new Date().toISOString()
-    })
+    }
+    
+    // 更新缓存
+    cachedProviders = { data: response, timestamp: Date.now() }
+    
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error reading OpenClaw config:', error)
     return NextResponse.json({

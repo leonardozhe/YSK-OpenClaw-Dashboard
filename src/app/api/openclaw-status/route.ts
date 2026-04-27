@@ -191,9 +191,37 @@ function parseStatusJson(json: Record<string, unknown>): Partial<OpenClawStatus>
       connectLatencyMs: (gw.connectLatencyMs as number) || 0
     }
 
-    // RPC 信息 - 改进判断逻辑，同时检查多个字段
+    // RPC 信息 - 改进判断逻辑，使用多个字段进行综合判断
+    // 优先级: rpc.ok > health.ok > gateway.reachable > gatewayService.running
+    // 检查多种可能的 RPC 状态字段名
+    const rpcDirect = gw.rpcOk ?? gw['rpc.ok'] ?? gw.isRpcOk ?? gw.rpcConnected
+    const healthOk = json.health && typeof json.health === 'object' 
+      ? (json.health as Record<string, unknown>).ok
+      : undefined
+    const gatewayReachable = gw.reachable ?? gw.isReachable
+    const rpcRunning = gw.running ?? gw.isRunning ?? gw.connected
+    
+    // 综合判断: 只要任何指标表明正常就认为 RPC 正常
+    let rpcOk = rpcDirect === true || 
+                healthOk === true || 
+                gatewayReachable === true || 
+                rpcRunning === true
+    
+    // 如果以上都没值，检查是否有明确的 false
+    if (!rpcOk && rpcDirect === false) {
+      rpcOk = false
+    } else if (!rpcOk && gatewayReachable === false) {
+      // gateway 不可达但没明确说 RPC 失败，尝试检查服务状态
+      const serviceRunning = result.service?.status === 'running'
+      rpcOk = Boolean(serviceRunning) // 服务运行中则认为 RPC 可能正常
+    } else if (!rpcOk) {
+      // 没有明确信息，但有 gateway 配置且服务运行中
+      const hasGatewayConfig = Boolean(gw.url && gw.mode !== '' && gw.mode !== 'unknown')
+      rpcOk = Boolean(result.service?.status === 'running' || hasGatewayConfig)
+    }
+    
     result.rpc = {
-      ok: (gw.rpcOk as boolean) ?? (gw['rpc.ok'] as boolean) ?? (gw.reachable as boolean) ?? false,
+      ok: !!rpcOk,
       url: (gw.url as string) || ''
     }
 

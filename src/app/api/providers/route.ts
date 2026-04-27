@@ -595,8 +595,9 @@ export async function GET() {
           inUse: usedModels.includes(`${providerId}/${model.id}`) || primaryModel === `${providerId}/${model.id}`
         }))
 
-        // 供应商已激活：有 API Key 且有模型配置
-        const activated = hasApiKey && models.length > 0
+        // 供应商已激活：有 API Key 或有 baseUrl 配置，且有模型配置
+        const hasApiKeyOrConfig = hasApiKey || !!providerBaseUrl
+        const activated = hasApiKeyOrConfig && models.length > 0
 
         providers.push({
           id: providerId,

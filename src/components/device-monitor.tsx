@@ -375,7 +375,6 @@ function LocalMachineCard({ data }: { data: RealSystemData | null }) {
 
 // 供应商卡片 - 显示供应商和模型信息
 function ProviderCard({ provider, index }: { provider: ProviderData; index: number }) {
-  const hasModelsInUse = provider.models.some(m => m.inUse)
   const [showAll, setShowAll] = useState(false) // 统一控制显示所有模型
   
   // 分离激活和可用模型
@@ -383,6 +382,11 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
   const availableModels = provider.models.filter(m => !m.inUse)
   const hasAvailableModels = availableModels.length > 0
   
+  // 判断供应商是否处于激活状态（有 API Key 且有模型配置就算激活）
+  const isProviderActivated = provider.activated
+  // 判断是否有模型正在使用中
+  const hasModelsInUse = activatedModels.length > 0
+
   // 激活模型超过 5 个时，默认只显示前 5 个
   const MAX_VISIBLE_ACTIVATED = 5
   const hasMoreActivated = activatedModels.length > MAX_VISIBLE_ACTIVATED
@@ -402,14 +406,14 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
       style={{
         background: 'rgba(15, 15, 25, 0.9)',
         border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: `0 0 20px ${hasModelsInUse ? '#00FF66' : '#FFAA00'}10`
+        boxShadow: `0 0 20px ${isProviderActivated ? '#00FF66' : '#FFAA00'}10`
       }}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.3 + index * 0.1 }}
     >
       {/* 脉冲动画背景 */}
-      {hasModelsInUse && (
+      {isProviderActivated && (
         <motion.div
           className="absolute inset-0 opacity-10"
           style={{ background: 'radial-gradient(circle at 50% 50%, #00FF66 0%, transparent 70%)' }}
@@ -484,12 +488,12 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
                   background: 'rgba(0, 255, 102, 0.2)',
                   color: '#00FF66'
                 }}>
-                  激活
+                  工作
                 </span>
               </div>
             ))}
             
-            {/* 隐藏的激活模型 - 点击按钮显示（仅当展开时且存在隐藏模型时渲染） */}
+              {/* 隐藏的激活模型 - 点击按钮显示（仅当展开时且存在隐藏模型时渲染） */}
             {showAll && hiddenActivatedModels.map(model => (
               <motion.div
                 key={model.id}
@@ -504,7 +508,7 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
                   background: 'rgba(0, 255, 102, 0.2)',
                   color: '#00FF66'
                 }}>
-                  激活
+                  工作
                 </span>
               </motion.div>
             ))}
@@ -794,8 +798,8 @@ export function DeviceMonitor() {
                   onClick={() => setActiveProviderIndex(i)}
                   className={`w-2 h-2 rounded-full transition-all duration-200 ${i === activeProviderIndex ? 'scale-125' : 'opacity-50 hover:opacity-80'}`}
                   style={{
-                    background: p.models.some(m => m.inUse) ? '#00FF66' : '#FFAA00',
-                    boxShadow: i === activeProviderIndex ? `0 0 6px ${p.models.some(m => m.inUse) ? '#00FF66' : '#FFAA00'}` : 'none'
+                    background: p.activated ? '#00FF66' : '#FFAA00',
+                    boxShadow: i === activeProviderIndex ? `0 0 6px ${p.activated ? '#00FF66' : '#FFAA00'}` : 'none'
                   }}
                   title={p.nameZh}
                 />
@@ -804,7 +808,11 @@ export function DeviceMonitor() {
           )}
           {/* 单供应商时显示状态点 */}
           {providers.length === 1 && (
-            <div className="w-2 h-2 rounded-full" style={{ background: providers[0].models.some(m => m.inUse) ? '#00FF66' : '#FFAA00', boxShadow: `0 0 6px ${providers[0].models.some(m => m.inUse) ? '#00FF66' : '#FFAA00'}` }} />
+            <div className="w-2 h-2 rounded-full" style={{ background: providers[0].activated ? '#00FF66' : '#FFAA00', boxShadow: `0 0 6px ${providers[0].activated ? '#00FF66' : '#FFAA00'}` }} />
+          )}
+          {/* 单供应商时显示状态点 */}
+          {providers.length === 1 && (
+            <div className="w-2 h-2 rounded-full" style={{ background: providers[0].activated ? '#00FF66' : '#FFAA00', boxShadow: `0 0 6px ${providers[0].activated ? '#00FF66' : '#FFAA00'}` }} />
           )}
         </div>
         <div className="space-y-2">

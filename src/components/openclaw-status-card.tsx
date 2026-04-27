@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExternalLink, RefreshCw, X, Copy, Check, Shield, Activity, Wifi, AlertTriangle } from 'lucide-react'
+import { ExternalLink, RefreshCw, X, Copy, Check, Shield, Activity, Wifi, AlertTriangle, Network } from 'lucide-react'
 
 interface SecurityAuditItem {
   level: 'critical' | 'warn' | 'info'
@@ -442,47 +442,35 @@ export function OpenClawStatusCard() {
           </div>
         </div>
 
-        {/* 网络状态 - Tailscale / ZeroTier */}
-        {status?.networks && (status.networks.tailscale.running || status.networks.zerotier.running) && (
-          <div className="mb-2 p-1.5 rounded-lg" style={{ background: 'rgba(6, 182, 212, 0.05)' }}>
-            <div className="flex items-center gap-2 text-[10px] flex-wrap">
-              <span className="text-white/40 flex items-center gap-1">
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
-                </svg>
-                网络
-              </span>
-              {status.networks.tailscale.running && (
-                <span className="px-1.5 py-0.5 rounded-full" style={{
-                  background: 'rgba(0, 240, 255, 0.15)',
-                  color: '#00F0FF'
-                }}>
-                  Tailscale
-                  {status.networks.tailscale.status === 'Running' && (
-                    <span className="ml-1 text-emerald-400">运行中</span>
-                  )}
-                  {status.networks.tailscale.ip && (
-                    <span className="ml-1 opacity-70">{status.networks.tailscale.ip}</span>
-                  )}
-                </span>
-              )}
-              {status.networks.zerotier.running && (
-                <span className="px-1.5 py-0.5 rounded-full" style={{
-                  background: 'rgba(168, 85, 247, 0.15)',
-                  color: '#a855f7'
-                }}>
-                  ZeroTier
-                  {status.networks.zerotier.networkCount > 0 && (
-                    <span className="ml-1 opacity-70">{status.networks.zerotier.networkCount} 网络</span>
-                  )}
-                  {status.networks.zerotier.ip && (
-                    <span className="ml-1 opacity-70">{status.networks.zerotier.ip}</span>
-                  )}
-                </span>
-              )}
+        {/* Tailscale */}
+        <div className="mb-2 p-1.5 rounded-lg" style={{ background: 'rgba(6, 182, 212, 0.05)' }}>
+          <div className="flex justify-between items-center text-[9px]">
+            <div className="flex items-center gap-1">
+              <Network className="w-2.5 h-2.5" style={{ color: status?.networks?.tailscale?.running ? '#00F0FF' : '#6B7280' }} />
+              <span className="text-white/40">Tailscale</span>
             </div>
+            {status?.networks?.tailscale?.running ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  color: '#10B981'
+                }}>
+                  已激活
+                </span>
+                {status.networks?.tailscale?.ip && (
+                  <span className="text-[9px] font-mono text-cyan-400">{status.networks.tailscale.ip}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{
+                background: 'rgba(107, 114, 128, 0.2)',
+                color: '#6B7280'
+              }}>
+                未激活
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Skills 信息 */}
         {status?.skills && status.skills.installed > 0 && (

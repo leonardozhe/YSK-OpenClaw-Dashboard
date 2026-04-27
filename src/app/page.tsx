@@ -907,7 +907,7 @@ const formatTimestamp = (timestamp: number): string => {
                 {/* 动态显示激活的 Channel */}
                 {channels.map((channel, index) => (
                   <div key={channel.id} className="flex items-center gap-1.5">
-                    <span className="text-sm text-gray-400">{channel.nameZh === 'Telegram' ? 'TG' : channel.nameZh}</span>
+                    <span className="text-sm text-gray-400">{channel.nameZh}</span>
                     <motion.div
                       className="w-2 h-2 rounded-full"
                       style={{

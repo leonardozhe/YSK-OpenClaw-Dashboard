@@ -174,7 +174,8 @@ export function OpenClawStatusCard() {
       case 'error':
         return '#EF4444'
       default:
-        return '#6B7280'
+        // 默认情况：根据 RPC 状态判断
+        return status.rpc?.ok ? '#10B981' : '#6B7280'
     }
   }
 
@@ -188,6 +189,9 @@ export function OpenClawStatusCard() {
       case 'error':
         return '异常'
       default:
+        // 默认情况：根据 RPC 和其他指标综合判断
+        if (status.rpc?.ok) return '运行中'
+        if (status.service?.status === 'running') return '运行中'
         return '未知'
     }
   }

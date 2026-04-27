@@ -589,11 +589,15 @@ export async function GET() {
         // 检查该供应商下是否有模型在使用
         const providerModels = (provider as Provider).models || []
 
-        const models = providerModels.map(model => ({
-          id: model.id,
-          name: getModelDisplayName(model.id, model.name),
-          inUse: usedModels.includes(`${providerId}/${model.id}`) || primaryModel === `${providerId}/${model.id}`
-        }))
+        const models = providerModels.map(model => {
+          const isUsed = usedModels.includes(`${providerId}/${model.id}`) || primaryModel === `${providerId}/${model.id}`
+          return {
+            id: model.id,
+            name: getModelDisplayName(model.id, model.name),
+            inUse: isUsed,
+            status: isUsed ? 'work' : 'config'
+          }
+        })
 
         // 供应商已激活：有 API Key 或有 baseUrl 配置，且有模型配置
         const hasApiKeyOrConfig = hasApiKey || !!providerBaseUrl

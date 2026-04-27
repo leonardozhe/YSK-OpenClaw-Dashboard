@@ -137,6 +137,7 @@ interface ProviderModel {
   id: string
   name: string
   inUse: boolean
+  status: 'work' | 'config'
 }
 
 interface ProviderData {
@@ -375,29 +376,21 @@ function LocalMachineCard({ data }: { data: RealSystemData | null }) {
 
 // 供应商卡片 - 显示供应商和模型信息
 function ProviderCard({ provider, index }: { provider: ProviderData; index: number }) {
-  const [showAll, setShowAll] = useState(false) // 统一控制显示所有模型
+  const [showAll, setShowAll] = useState(false)
   
-  // 分离激活和可用模型
-  const activatedModels = provider.models.filter(m => m.inUse)
-  const availableModels = provider.models.filter(m => !m.inUse)
-  const hasAvailableModels = availableModels.length > 0
+  // 分离工作和配置模型
+  const workModels = provider.models.filter(m => m.status === 'work')
+  const configModels = provider.models.filter(m => m.status === 'config')
   
-  // 判断供应商是否处于激活状态（有 API Key 且有模型配置就算激活）
+  // 判断供应商是否处于激活状态
   const isProviderActivated = provider.activated
-  // 判断是否有模型正在使用中
-  const hasModelsInUse = activatedModels.length > 0
-
-  // 激活模型超过 5 个时，默认只显示前 5 个
-  const MAX_VISIBLE_ACTIVATED = 5
-  const hasMoreActivated = activatedModels.length > MAX_VISIBLE_ACTIVATED
-  // 始终只显示前5个激活模型
-  const visibleActivatedModels = activatedModels.slice(0, MAX_VISIBLE_ACTIVATED)
-  // 隐藏的激活模型（用于展开时额外显示）
-  const hiddenActivatedModels = activatedModels.slice(MAX_VISIBLE_ACTIVATED)
-  const hiddenActivatedCount = Math.max(0, activatedModels.length - MAX_VISIBLE_ACTIVATED)
+  const hasWorkModels = workModels.length > 0
   
-  // 计算隐藏的总数（隐藏的激活模型 + 可用模型）
-  const totalHiddenCount = hiddenActivatedCount + availableModels.length
+  // 工作模型超过 5 个时，默认只显示前 5 个
+  const MAX_VISIBLE_WORK = 5
+  const visibleWorkModels = workModels.slice(0, MAX_VISIBLE_WORK)
+  const hiddenWorkCount = Math.max(0, workModels.length - MAX_VISIBLE_WORK)
+  const totalHiddenCount = hiddenWorkCount + configModels.length
   const hasHiddenModels = totalHiddenCount > 0
 
   return (
@@ -474,12 +467,12 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
         </div>
       </div>
 
-      {/* 模型列表 - 默认只显示激活的模型（最多5个） */}
+      {/* 模型列表 - 工作模型（绿色）和配置模型（黄色） */}
       <div className="relative">
         {provider.models.length > 0 ? (
           <div className="space-y-1">
-            {/* 激活的模型 - 默认只显示前5个 */}
-            {visibleActivatedModels.map(model => (
+            {/* 工作模型 - 绿色，默认最多显示5个 */}
+            {visibleWorkModels.map(model => (
               <div key={model.id} className="flex items-center justify-between p-1.5 rounded-lg" style={{
                 background: 'rgba(0, 255, 102, 0.08)'
               }}>
@@ -493,8 +486,8 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
               </div>
             ))}
             
-              {/* 隐藏的激活模型 - 点击按钮显示（仅当展开时且存在隐藏模型时渲染） */}
-            {showAll && hiddenActivatedModels.map(model => (
+            {/* 隐藏的工作模型 - 展开时显示 */}
+            {showAll && workModels.slice(MAX_VISIBLE_WORK).map(model => (
               <motion.div
                 key={model.id}
                 className="flex items-center justify-between p-1.5 rounded-lg"
@@ -513,38 +506,35 @@ function ProviderCard({ provider, index }: { provider: ProviderData; index: numb
               </motion.div>
             ))}
             
-            {/* 可用的模型 - 点击按钮显示 */}
-            {showAll && availableModels.map(model => (
+            {/* 已配置但未工作的模型 - 黄色 */}
+            {configModels.map(model => (
               <motion.div
                 key={model.id}
                 className="flex items-center justify-between p-1.5 rounded-lg"
-                style={{ background: 'rgba(255, 255, 255, 0.03)' }}
-                initial={{ opacity: 0, height: 0 }}
+                style={{ background: 'rgba(255, 170, 0, 0.06)' }}
+                initial={{ opacity: showAll ? 0 : 1, height: 'auto' }}
                 animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
               >
                 <span className="text-[10px] text-white/70">{model.name}</span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'rgba(255, 255, 255, 0.5)'
+                  background: 'rgba(255, 170, 0, 0.2)',
+                  color: '#FFAA00'
                 }}>
-                  可用
+                  配置
                 </span>
               </motion.div>
             ))}
             
-            {/* 无激活模型时的提示 */}
-            {activatedModels.length === 0 && (
+            {/* 无工作模型时的提示 */}
+            {workModels.length === 0 && configModels.length > 0 && (
               <div className="p-1.5 rounded-lg text-center" style={{ background: 'rgba(255, 170, 0, 0.08)' }}>
-                <span className="text-[10px] text-white/50">
-                  {hasAvailableModels ? '暂无激活模型' : '暂无模型配置'}
-                </span>
+                <span className="text-[10px] text-white/50">暂无工作模型</span>
               </div>
             )}
           </div>
         ) : (
           <div className="p-1.5 rounded-lg text-center" style={{ background: 'rgba(255, 170, 0, 0.08)' }}>
-            <span className="text-[10px] text-white/50">厂商已激活，暂无模型配置</span>
+            <span className="text-[10px] text-white/50">暂无模型配置</span>
           </div>
         )}
       </div>

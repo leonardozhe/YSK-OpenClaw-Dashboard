@@ -9,7 +9,7 @@ interface GitHubRelease {
 }
 
 const REPO_URL = 'https://api.github.com/repos/leonardozhe/YSK-OpenClaw-Dashboard'
-const CURRENT_VERSION = '2.3'
+const CURRENT_VERSION = '2.4'
 
 // Cache for 24 hours
 let cachedRelease: { version: string; data: GitHubRelease | null; timestamp: number } | null = null

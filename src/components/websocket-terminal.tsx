@@ -139,7 +139,10 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
           wsProtocol = 'ws://';
         }
 
-        const wsUrl = `${wsProtocol}${window.location.hostname}:${gatewayPort}`;
+        // 优先使用环境变量配置的 Gateway 地址，否则使用当前页面主机名
+        // 局域网访问时，WebSocket 连接需要指向部署了 OpenClaw Gateway 的机器
+        const gatewayHost = process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_HOST || window.location.hostname;
+        const wsUrl = `${wsProtocol}${gatewayHost}:${gatewayPort}`;
         console.log('🔌 WebSocket 连接信息:', {
           protocol: wsProtocol,
           hostname: window.location.hostname,
@@ -847,7 +850,22 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
     console.log('🔍 sendChatMessage 调用:', { channelId, text })
     console.log('🔌 WebSocket 状态:', wsRef.current?.readyState)
     
+    // 如果 WebSocket 未打开，尝试重连一次
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      if (wsRef.current?.readyState === WebSocket.CLOSED) {
+        console.log('🔄 WebSocket 已关闭，尝试重新连接...')
+        addTerminalLine('🔄 连接已断开，正在重连...', 'system')
+        connectToOpenClaw()
+        // 延迟发送，等待连接建立
+        setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            sendChatMessage(channelId, text)
+          } else {
+            addTerminalLine('❌ 重连失败，请刷新页面', 'error')
+          }
+        }, 2000)
+        return false
+      }
       console.warn('⚠️ WebSocket 未就绪')
       addTerminalLine('WebSocket 连接未就绪', 'error')
       return false

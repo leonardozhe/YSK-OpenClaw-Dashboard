@@ -1,6 +1,6 @@
 # YSK - OpenClaw Dashboard
 
-[![Version](https://img.shields.io/badge/version-2.3-cyan)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases)
+[![Version](https://img.shields.io/badge/version-2.4-cyan)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard/releases)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org)
 [![License](https://img.shields.io/badge/license-YSK%20Fan%20Exclusive-red)](https://github.com/leonardozhe/YSK-OpenClaw-Dashboard#-license)
 

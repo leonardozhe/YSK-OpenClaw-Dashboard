@@ -1306,7 +1306,7 @@ const formatTimestamp = (timestamp: number): string => {
               ) : null}
               
               <div className="text-xs text-gray-500">
-                Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved
+                Powered by <a href="https://clawbang.cn" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">ClawBang.cn</a> © 2026 All Rights Reserved V2.4
               </div>
             </div>
           </div>

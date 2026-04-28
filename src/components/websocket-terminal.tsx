@@ -1,6 +1,6 @@
  'use client'
 
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
 import { Terminal as TerminalIcon, Play, Square, Copy, Download, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { randomUUID } from 'crypto'
@@ -44,6 +44,70 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
   const [selectedChannel, setSelectedChannel] = useState<string>('main')
   const [currentInstanceId, setCurrentInstanceId] = useState<string>('')
   const [currentDeviceId, setCurrentDeviceId] = useState<string>('')
+  
+  // 模型选择状态
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [showModelPicker, setShowModelPicker] = useState(false)
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([])
+  
+  // 聊天记录持久化
+  const STORAGE_KEY = 'meetclaw-chat-messages'
+  
+  // 加载聊天记录
+  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string; timestamp: number; model?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+  
+  // 保存聊天记录到 localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory.slice(-200))) // 最多保存 200 条
+    } catch (e) {
+      console.warn('Failed to save chat history:', e)
+    }
+  }, [chatHistory])
+  
+  // 清理聊天记录
+  const clearChatHistory = useCallback(() => {
+    setChatHistory([])
+    localStorage.removeItem(STORAGE_KEY)
+    addTerminalLine('🗑️ 聊天记录已清理', 'system')
+  }, [])
+  
+  // 加载可用模型
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await fetch('/api/providers')
+        const data = await res.json()
+        if (data.providers) {
+          const models: Array<{ id: string; name: string; provider: string }> = []
+          for (const provider of data.providers) {
+            for (const model of (provider.models || [])) {
+              models.push({
+                id: `${provider.id}/${model.id}`,
+                name: model.name,
+                provider: provider.nameZh
+              })
+            }
+          }
+          setAvailableModels(models)
+          // 设置当前默认模型
+          if (data.primaryModel && !selectedModel) {
+            setSelectedModel(data.primaryModel)
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch models:', e)
+      }
+    }
+    fetchModels()
+  }, [])
 
   const wsRef = useRef<WebSocket | null>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
@@ -638,6 +702,16 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
                 const channelId = chatPayload?.channelId || 'main'
                 console.log('📨 [Terminal] 收到 chat.message 事件:', { channelId, messageText })
                 addTerminalLine(`💬 [${channelId}] AI: ${messageText}`, 'output')
+                
+                // 保存 AI 回复到聊天历史
+                const aiMsg = {
+                  role: 'assistant',
+                  content: messageText,
+                  timestamp: Date.now(),
+                  model: selectedModel || undefined
+                }
+                setChatHistory(prev => [...prev, aiMsg])
+                
                 // 触发自定义事件通知 UI 更新
                 console.log('🔔 [Terminal] 触发 openclaw:chat:message 事件')
                 window.dispatchEvent(new CustomEvent('openclaw:chat:message', {
@@ -671,6 +745,16 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
                   
                   console.log('📨 [Terminal] 提取的消息文本:', { channelId, messageText })
                   addTerminalLine(`💬 [${channelId}] AI: ${messageText}`, 'output')
+                  
+                  // 保存 AI 回复到聊天历史
+                  const aiMsg = {
+                    role: 'assistant',
+                    content: messageText,
+                    timestamp: Date.now(),
+                    model: selectedModel || undefined
+                  }
+                  setChatHistory(prev => [...prev, aiMsg])
+                  
                   // 触发自定义事件通知 UI 更新 - 这会关闭 AI 思考动画
                   console.log('🔔 [Terminal] 触发 openclaw:chat:message 事件 (chat 事件)')
                   window.dispatchEvent(new CustomEvent('openclaw:chat:message', {
@@ -850,20 +934,11 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
     console.log('🔍 sendChatMessage 调用:', { channelId, text })
     console.log('🔌 WebSocket 状态:', wsRef.current?.readyState)
     
-    // 如果 WebSocket 未打开，尝试重连一次
+    // 如果 WebSocket 未打开，提示用户
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       if (wsRef.current?.readyState === WebSocket.CLOSED) {
-        console.log('🔄 WebSocket 已关闭，尝试重新连接...')
-        addTerminalLine('🔄 连接已断开，正在重连...', 'system')
-        connectToOpenClaw()
-        // 延迟发送，等待连接建立
-        setTimeout(() => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            sendChatMessage(channelId, text)
-          } else {
-            addTerminalLine('❌ 重连失败，请刷新页面', 'error')
-          }
-        }, 2000)
+        console.log('🔄 WebSocket 已关闭')
+        addTerminalLine('🔄 连接已断开，请点击重新连接', 'system')
         return false
       }
       console.warn('⚠️ WebSocket 未就绪')
@@ -891,7 +966,7 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
     
     // 🔑 构建标准 JSON-RPC 请求 - 参考 OpenClaw-Chat-Gateway
     // OpenClaw Gateway 格式：{ type: "req", id: string, method: string, params: object }
-    // chat.send 参数：sessionKey, message, idempotencyKey, attachments (可选)
+    // chat.send 参数：sessionKey, message, idempotencyKey, model (可选), attachments (可选)
     // sessionKey 格式：agent:{agentId}:chat:{channelId}
     const agentId = 'main'
     const sessionKey = `agent:${agentId}:chat:${channelId}`
@@ -904,16 +979,27 @@ export const WebsocketTerminal = forwardRef<{ sendChatMessage: (channelId: strin
       idempotencyKey = `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     }
     
+    const params: Record<string, unknown> = {
+      sessionKey: sessionKey,
+      message: text,
+      idempotencyKey: idempotencyKey
+    }
+    
+    // 如果选择了模型，添加到参数中
+    if (selectedModel) {
+      params.model = selectedModel
+    }
+    
     const chatMsg = {
       type: "req",
       id: `chat-${Date.now()}`,
       method: "chat.send",
-      params: {
-        sessionKey: sessionKey,
-        message: text,
-        idempotencyKey: idempotencyKey
-      }
+      params: params
     }
+    
+    // 保存用户消息到聊天历史
+    const userMsg = { role: 'user', content: text, timestamp: Date.now() }
+    setChatHistory(prev => [...prev, userMsg])
     
     console.log('📤 发送聊天消息:', JSON.stringify(chatMsg, null, 2))
     wsRef.current.send(JSON.stringify(chatMsg))
@@ -1407,40 +1493,132 @@ OpenClaw Gateway WebSocket API 帮助
               </div>
             </div>
 
-            {/* 终端内容区 */}
-            <div
-              ref={terminalRef}
-              className="p-4 font-mono text-sm text-gray-100 overflow-y-auto"
-              style={{ height: '400px' }}
-            >
-              {terminalLines.map((line) => (
-                <motion.div
-                  key={line.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`mb-1 whitespace-pre-wrap ${
-                    line.type === 'input' ? 'text-cyan-400' :
-                    line.type === 'system' ? 'text-yellow-400' :
-                    line.type === 'error' ? 'text-red-400' :
-                    'text-gray-300'
-                  }`}
-                >
-                  {line.type === 'input' && <span className="text-green-400 mr-2">$</span>}
-                  {line.content}
-                </motion.div>
-              ))}
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-yellow-400"
-                >
-                  正在连接...
-                </motion.div>
-              )}
-            </div>
+             {/* 终端内容区 */}
+             <div
+               ref={terminalRef}
+               className="p-4 font-mono text-sm text-gray-100 overflow-y-auto"
+               style={{ height: '400px' }}
+             >
+               {/* 聊天历史记录 */}
+               {chatHistory.map((msg, idx) => (
+                 <motion.div
+                   key={idx}
+                   initial={{ opacity: 0, y: 5 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   className={`mb-2 whitespace-pre-wrap ${
+                     msg.role === 'user' ? 'text-cyan-400' :
+                     msg.role === 'assistant' ? 'text-green-400' :
+                     'text-gray-300'
+                   }`}
+                 >
+                   {msg.role === 'user' ? (
+                     <span>
+                       <span className="text-gray-500">You: </span>{msg.content}
+                     </span>
+                   ) : msg.role === 'assistant' ? (
+                     <span>
+                       <span className="text-gray-500">AI[{msg.model || 'default'}]: </span>{msg.content}
+                       {msg.model && <span className="text-xs text-yellow-400 ml-1">🤖</span>}
+                     </span>
+                   ) : null}
+                 </motion.div>
+               ))}
+               
+               {terminalLines.map((line) => (
+                 <motion.div
+                   key={line.id}
+                   initial={{ opacity: 0, x: -10 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   className={`mb-1 whitespace-pre-wrap ${
+                     line.type === 'input' ? 'text-cyan-400' :
+                     line.type === 'system' ? 'text-yellow-400' :
+                     line.type === 'error' ? 'text-red-400' :
+                     'text-gray-300'
+                   }`}
+                 >
+                   {line.type === 'input' && <span className="text-green-400 mr-2">$</span>}
+                   {line.content}
+                 </motion.div>
+               ))}
+               {isLoading && (
+                 <motion.div
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   className="text-yellow-400"
+                 >
+                   正在连接...
+                 </motion.div>
+               )}
+             </div>
 
-            {/* 命令输入区 */}
+             {/* 模型选择器 */}
+             {isConnected && availableModels.length > 0 && (
+               <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/50">
+                 <div className="flex items-center gap-2">
+                   <span className="text-xs text-gray-400">模型:</span>
+                   <button
+                     onClick={() => setShowModelPicker(!showModelPicker)}
+                     className="flex-1 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors text-left flex items-center justify-between"
+                   >
+                     <span className="truncate mr-2">
+                       {selectedModel ? availableModels.find(m => m.id === selectedModel)?.name || selectedModel : '默认模型'}
+                     </span>
+                     <span className="text-gray-400 ml-2 flex-shrink-0">▼</span>
+                   </button>
+                   <button
+                     onClick={clearChatHistory}
+                     className="px-3 py-1.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors flex items-center gap-1"
+                     title="清理聊天记录"
+                   >
+                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                     </svg>
+                     清理记录
+                   </button>
+                 </div>
+                 
+                 {/* 模型选择下拉框 */}
+                 <AnimatePresence>
+                   {showModelPicker && (
+                     <motion.div
+                       className="mt-2 bg-gray-800 border border-gray-700 rounded-lg overflow-y-auto max-h-48"
+                       initial={{ opacity: 0, y: -10 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       exit={{ opacity: 0, y: -10 }}
+                     >
+                       <button
+                         onClick={() => { setSelectedModel(''); setShowModelPicker(false) }}
+                         className={`w-full px-3 py-2 text-xs text-left hover:bg-gray-700 transition-colors ${
+                           !selectedModel ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-300'
+                         }`}
+                       >
+                         默认模型
+                       </button>
+                       {availableModels.map(model => (
+                         <button
+                           key={model.id}
+                           onClick={() => {
+                             setSelectedModel(model.id)
+                             setShowModelPicker(false)
+                             addTerminalLine(`🔄 已切换模型: ${model.name}`, 'system')
+                           }}
+                           className={`w-full px-3 py-2 text-xs text-left hover:bg-gray-700 transition-colors ${
+                             selectedModel === model.id ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-300'
+                           }`}
+                         >
+                           <div className="flex items-center justify-between">
+                             <span className="truncate mr-2">{model.name}</span>
+                             <span className="text-gray-500 text-[10px] flex-shrink-0">{model.provider}</span>
+                           </div>
+                         </button>
+                       ))}
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+               </div>
+             )}
+
+             {/* 命令输入区 */}
             <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/50">
               <div className="flex items-center gap-2">
                 <span className="text-green-400 font-mono">$</span>
